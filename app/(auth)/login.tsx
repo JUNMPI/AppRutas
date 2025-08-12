@@ -51,7 +51,7 @@ export default function LoginScreen() {
   };
 
   const handleRegister = () => {
-    router.push('/(auth)/register');
+    router.push('/register' as any);
   };
 
   return (

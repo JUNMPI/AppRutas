@@ -1,7 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Tabs, router } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, TouchableOpacity } from 'react-native';
+import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -11,17 +10,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('userEmail');
-      await AsyncStorage.removeItem('userName');
-      router.replace('/(auth)/login');
-    } catch (error) {
-      console.error('Error al cerrar sesión:', error);
-    }
-  };
 
   return (
     <Tabs
@@ -82,18 +70,6 @@ export default function TabLayout() {
           headerTitle: 'Mi Perfil',
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
-          ),
-          headerRight: () => (
-            <TouchableOpacity 
-              onPress={handleLogout}
-              style={{ marginRight: 15, padding: 5 }}
-            >
-              <IconSymbol 
-                name="chevron.right" 
-                size={20} 
-                color={Colors[colorScheme ?? 'light'].text} 
-              />
-            </TouchableOpacity>
           ),
         }}
       />
