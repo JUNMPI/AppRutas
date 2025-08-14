@@ -220,7 +220,15 @@ export const getUserStats = async (req: Request, res: Response): Promise<void> =
       )
     ]);
 
-    const stats = {
+    // Definir el tipo correcto para stats
+    interface UserStats {
+      total_routes: number;
+      completed_executions: number;
+      total_distance_km: number;
+      routes_by_day: Record<string, number>;
+    }
+
+    const stats: UserStats = {
       total_routes: parseInt(routesCount.rows[0].count),
       completed_executions: parseInt(executionsCount.rows[0].count),
       total_distance_km: parseFloat(totalDistance.rows[0].total),
@@ -238,8 +246,13 @@ export const getUserStats = async (req: Request, res: Response): Promise<void> =
     );
 
     const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    routesByDay.rows.forEach(row => {
-      stats.routes_by_day[dayNames[row.day_of_week]] = parseInt(row.count);
+    
+    // Corregir el error de tipos aquí
+    routesByDay.rows.forEach((row: any) => {
+      const dayName = dayNames[row.day_of_week];
+      if (dayName) {
+        stats.routes_by_day[dayName] = parseInt(row.count);
+      }
     });
 
     res.json({
