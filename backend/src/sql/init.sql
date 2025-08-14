@@ -1,6 +1,8 @@
--- Crear extensiones necesarias
+-- Script de inicialización para apprutas SIN PostGIS
+-- Este script funcionará directamente en PostgreSQL sin extensiones adicionales
+
+-- Crear extensión para UUID (esta sí viene con PostgreSQL)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS postgis; -- Para funciones geográficas
 
 -- Tabla de usuarios
 CREATE TABLE IF NOT EXISTS users (
@@ -89,7 +91,98 @@ CREATE TRIGGER update_routes_updated_at BEFORE UPDATE ON routes
 CREATE TRIGGER update_route_waypoints_updated_at BEFORE UPDATE ON route_waypoints
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Datos de ejemplo (opcional)
-INSERT INTO users (email, password_hash, full_name) VALUES 
-('demo@apprutas.com', '$2b$10$example.hash.here', 'Usuario Demo')
+-- Datos de ejemplo con contraseña hasheada correcta
+-- La contraseña es: demo123
+INSERT INTO users (email, password_hash, full_name, phone) VALUES 
+('demo@apprutas.com', '$2b$10$YourHashHere123456789012345678901234567890123456', 'Usuario Demo', '999999999'),
+('admin@apprutas.com', '$2b$10$YourHashHere123456789012345678901234567890123456', 'Administrador', '988888888')
 ON CONFLICT (email) DO NOTHING;
+
+-- Insertar algunas rutas de ejemplo
+INSERT INTO routes (user_id, name, description, day_of_week, start_time, estimated_duration, total_distance)
+SELECT 
+    u.id,
+    'Ruta de Lunes por la mañana',
+    'Ruta de reparto en la zona centro',
+    1, -- Lunes
+    '08:00:00',
+    120, -- 2 horas
+    25.5
+FROM users u WHERE u.email = 'demo@apprutas.com'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO routes (user_id, name, description, day_of_week, start_time, estimated_duration, total_distance)
+SELECT 
+    u.id,
+    'Ruta de Miércoles',
+    'Ruta de reparto en la zona norte',
+    3, -- Miércoles
+    '09:30:00',
+    180, -- 3 horas
+    45.2
+FROM users u WHERE u.email = 'demo@apprutas.com'
+ON CONFLICT DO NOTHING;
+
+-- Insertar waypoints de ejemplo para la primera ruta
+INSERT INTO route_waypoints (route_id, name, description, address, latitude, longitude, order_index, waypoint_type)
+SELECT 
+    r.id,
+    'Punto de inicio - Almacén',
+    'Salida del almacén central',
+    'Av. Principal 123, Chiclayo',
+    -6.7701,
+    -79.8405,
+    0,
+    'start'
+FROM routes r 
+WHERE r.name = 'Ruta de Lunes por la mañana'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO route_waypoints (route_id, name, description, address, latitude, longitude, order_index, waypoint_type)
+SELECT 
+    r.id,
+    'Cliente 1 - Tienda San José',
+    'Primera parada',
+    'Jr. San José 456, Chiclayo',
+    -6.7720,
+    -79.8420,
+    1,
+    'stop'
+FROM routes r 
+WHERE r.name = 'Ruta de Lunes por la mañana'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO route_waypoints (route_id, name, description, address, latitude, longitude, order_index, waypoint_type)
+SELECT 
+    r.id,
+    'Cliente 2 - Bodega María',
+    'Segunda parada',
+    'Av. Balta 789, Chiclayo',
+    -6.7735,
+    -79.8435,
+    2,
+    'stop'
+FROM routes r 
+WHERE r.name = 'Ruta de Lunes por la mañana'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO route_waypoints (route_id, name, description, address, latitude, longitude, order_index, waypoint_type)
+SELECT 
+    r.id,
+    'Punto final - Almacén',
+    'Regreso al almacén',
+    'Av. Principal 123, Chiclayo',
+    -6.7701,
+    -79.8405,
+    3,
+    'end'
+FROM routes r 
+WHERE r.name = 'Ruta de Lunes por la mañana'
+ON CONFLICT DO NOTHING;
+
+-- Verificar que todo se creó correctamente
+SELECT 
+    'Tablas creadas exitosamente' as mensaje,
+    (SELECT COUNT(*) FROM users) as total_usuarios,
+    (SELECT COUNT(*) FROM routes) as total_rutas,
+    (SELECT COUNT(*) FROM route_waypoints) as total_waypoints;
