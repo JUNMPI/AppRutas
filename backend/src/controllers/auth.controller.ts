@@ -30,11 +30,11 @@ export const register = async (req: any, res: any) => {
 
     const user = newUser.rows[0];
 
-    // Crear token
+    // Crear token con expiración fija
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      process.env.JWT_SECRET || 'mi_super_secreto_jwt_2024',
+      { expiresIn: '7d' } // 7 días
     );
 
     // Guardar sesión en Redis
@@ -93,11 +93,11 @@ export const login = async (req: any, res: any) => {
       [user.id]
     );
 
-    // Crear token
+    // Crear token con expiración fija
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      process.env.JWT_SECRET!,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      process.env.JWT_SECRET || 'mi_super_secreto_jwt_2024',
+      { expiresIn: '7d' } // 7 días
     );
 
     // Guardar sesión en Redis

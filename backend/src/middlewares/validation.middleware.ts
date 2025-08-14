@@ -1,138 +1,81 @@
 import { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
-import pool from '../config/database';
-import redis from '../config/redis';
-import { JWTPayload, UserPublic } from '../types';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: UserPublic;
-    }
-  }
-}
+export const validateRegister = (req: Request, res: Response, next: NextFunction) => {
+  const { email, password, fullName } = req.body;
 
-export const authenticateToken = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-    if (!token) {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Token de acceso requerido' 
-      });
-      return;
-    }
-
-    // Verificar token JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
-
-    // Verificar si la sesión existe en Redis
-    const sessionData = await redis.get(`session:${decoded.id}`);
-    if (!sessionData) {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Sesión expirada' 
-      });
-      return;
-    }
-
-    // Buscar usuario en la base de datos
-    const userResult = await pool.query(
-      'SELECT id, email, full_name, phone, is_active, email_verified, last_login, created_at FROM users WHERE id = $1 AND deleted_at IS NULL',
-      [decoded.id]
-    );
-
-    if (userResult.rows.length === 0) {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Usuario no encontrado' 
-      });
-      return;
-    }
-
-    const user = userResult.rows[0] as UserPublic;
-
-    if (!user.is_active) {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Usuario inactivo' 
-      });
-      return;
-    }
-
-    // Agregar usuario al request
-    req.user = user;
-
-    // Extender sesión en Redis (renovar TTL)
-    await redis.expire(`session:${user.id}`, 60 * 60 * 24 * 7); // 7 días
-
-    next();
-  } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Token inválido' 
-      });
-      return;
-    }
-
-    console.error('Error en autenticación:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Error interno del servidor' 
+  if (!email || !password || !fullName) {
+    return res.status(400).json({
+      success: false,
+      error: 'Todos los campos son requeridos'
     });
   }
-};
 
-export const optionalAuth = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      next();
-      return;
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
-    
-    const userResult = await pool.query(
-      'SELECT id, email, full_name, phone, is_active, email_verified, last_login, created_at FROM users WHERE id = $1 AND deleted_at IS NULL',
-      [decoded.id]
-    );
-
-    if (userResult.rows.length > 0) {
-      req.user = userResult.rows[0] as UserPublic;
-    }
-
-    next();
-  } catch (error) {
-    // En auth opcional, ignoramos errores y continuamos
-    next();
-  }
-};
-
-export const requireEmailVerification = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  if (!req.user?.email_verified) {
-    res.status(403).json({ 
-      success: false, 
-      error: 'Email no verificado' 
+  if (password.length < 8) {
+    return res.status(400).json({
+      success: false,
+      error: 'La contraseña debe tener al menos 8 caracteres'
     });
-    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Email inválido'
+    });
+  }
+
+  next();
+};
+
+export const validateLogin = (req: Request, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      error: 'Email y contraseña son requeridos'
+    });
+  }
+
+  next();
+};
+
+export const validateCreateRoute = (req: Request, res: Response, next: NextFunction) => {
+  const { name, day_of_week, waypoints } = req.body;
+
+  if (!name || day_of_week === undefined || !waypoints) {
+    return res.status(400).json({
+      success: false,
+      error: 'Nombre, día y waypoints son requeridos'
+    });
+  }
+
+  if (!Array.isArray(waypoints) || waypoints.length < 2) {
+    return res.status(400).json({
+      success: false,
+      error: 'Se requieren al menos 2 waypoints'
+    });
+  }
+
+  next();
+};
+
+export const validatePagination = (req: Request, res: Response, next: NextFunction) => {
+  const { page, limit } = req.query;
+
+  if (page && isNaN(Number(page))) {
+    return res.status(400).json({
+      success: false,
+      error: 'Página debe ser un número'
+    });
+  }
+
+  if (limit && isNaN(Number(limit))) {
+    return res.status(400).json({
+      success: false,
+      error: 'Límite debe ser un número'
+    });
   }
 
   next();

@@ -29,8 +29,11 @@ export const authenticateToken = async (
       return;
     }
 
-    // Verificar token JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    // Verificar token JWT con el secret correcto
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'mi_super_secreto_jwt_2024'
+    ) as JWTPayload;
 
     // Verificar si la sesión existe en Redis
     const sessionData = await redis.get(`session:${decoded.id}`);
@@ -104,7 +107,10 @@ export const optionalAuth = async (
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'mi_super_secreto_jwt_2024'
+    ) as JWTPayload;
     
     const userResult = await pool.query(
       'SELECT id, email, full_name, phone, is_active, email_verified, last_login, created_at FROM users WHERE id = $1 AND deleted_at IS NULL',
