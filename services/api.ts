@@ -8,7 +8,7 @@ const getBaseURL = () => {
   } else if (Platform.OS === 'ios') {
     return 'http://localhost:5000/api';  // Para simulador iOS
   } else {
-    return 'http://192.168.0.105:5000/api'; // ← TU IP LOCAL
+    return 'http://192.168.100.4:5000/api'; // ← TU NUEVA IP
   }
 };
 
