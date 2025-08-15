@@ -4,14 +4,16 @@ import { Platform } from 'react-native';
 
 const getBaseURL = () => {
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:5000/api';  // Para emulador Android
+    // Si usas emulador Android
+    return __DEV__ ? 'http://10.0.2.2:5000/api' : 'http://192.168.100.4:5000/api';
   } else if (Platform.OS === 'ios') {
-    return 'http://localhost:5000/api';  // Para simulador iOS
+    // Para simulador iOS
+    return 'http://localhost:5000/api';
   } else {
-    return 'http://192.168.100.4:5000/api'; // ← TU NUEVA IP
+    // Para dispositivo físico o web
+    return 'http://192.168.100.4:5000/api';
   }
 };
-
 const api = axios.create({
   baseURL: getBaseURL(),
   timeout: 10000,
