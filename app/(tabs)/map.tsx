@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,7 +12,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+
+// Importación condicional de MapView
+let MapView: any = View;
+let Marker: any = View;
+let Polyline: any = View;
+
+if (Platform.OS !== 'web') {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  Polyline = Maps.Polyline;
+}
 
 interface Waypoint {
   id: string;
@@ -107,19 +119,6 @@ export default function MapScreen() {
     }
 
     try {
-      // Aquí integrarías con tu API
-      // const response = await api.post('/routes', {
-      //   name: routeName,
-      //   day_of_week: selectedDay,
-      //   waypoints: waypoints.map(wp => ({
-      //     name: wp.name,
-      //     latitude: wp.latitude,
-      //     longitude: wp.longitude,
-      //     order_index: wp.order_index,
-      //     waypoint_type: wp.order_index === 0 ? 'start' : wp.order_index === waypoints.length - 1 ? 'end' : 'stop'
-      //   }))
-      // });
-
       Alert.alert(
         'Éxito',
         `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]}`,
@@ -142,6 +141,22 @@ export default function MapScreen() {
     setWaypoints([]);
     setRouteName('');
   };
+
+  // Si estamos en web, mostramos un mensaje alternativo
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.webContainer}>
+        <Ionicons name="map-outline" size={80} color="#3498db" />
+        <Text style={styles.webTitle}>Mapas no disponibles en Web</Text>
+        <Text style={styles.webText}>
+          Por favor usa la aplicación móvil para acceder a las funciones del mapa
+        </Text>
+        <TouchableOpacity style={styles.webButton}>
+          <Text style={styles.webButtonText}>Descargar App Móvil</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -314,6 +329,37 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  webContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  webTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  webText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  webButton: {
+    backgroundColor: '#3498db',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  webButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   map: {
     flex: 1,
