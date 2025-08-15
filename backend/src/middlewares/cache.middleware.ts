@@ -147,11 +147,13 @@ export class CacheManager {
       const info = await redis.info('memory');
       const keys = await redis.dbsize();
       
+      const memoryInfo = info ? info.split('\r\n')
+        .find(line => line.startsWith('used_memory_human:'))
+        ?.split(':')[1] || 'N/A' : 'N/A';
+      
       return {
         totalKeys: keys,
-        memoryUsage: info.split('\r\n')
-          .find(line => line.startsWith('used_memory_human:'))
-          ?.split(':')[1] || 'N/A'
+        memoryUsage: memoryInfo
       };
     } catch (error) {
       console.error('Error obteniendo estadísticas de cache:', error);

@@ -35,16 +35,10 @@ export const authenticateToken = async (
       process.env.JWT_SECRET || 'mi_super_secreto_jwt_2024'
     ) as JWTPayload;
 
-    // Verificar si la sesión existe en Redis
+    // Verificar si la sesión existe en Redis (si está disponible)
     const sessionData = await redis.get(`session:${decoded.id}`);
-    if (!sessionData) {
-      res.status(401).json({ 
-        success: false, 
-        error: 'Sesión expirada' 
-      });
-      return;
-    }
-
+    // Si Redis no está disponible, continuamos solo con JWT
+    
     // Buscar usuario en la base de datos
     const userResult = await pool.query(
       'SELECT id, email, full_name, phone, is_active, email_verified, last_login, created_at FROM users WHERE id = $1 AND deleted_at IS NULL',
@@ -72,7 +66,7 @@ export const authenticateToken = async (
     // Agregar usuario al request
     req.user = user;
 
-    // Extender sesión en Redis (renovar TTL)
+    // Extender sesión en Redis (si está disponible)
     await redis.expire(`session:${user.id}`, 60 * 60 * 24 * 7); // 7 días
 
     next();

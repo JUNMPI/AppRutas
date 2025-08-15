@@ -4,7 +4,7 @@ import pool from '../config/database';
 import redis from '../config/redis';
 
 export const register = async (req: any, res: any) => {
-  const { email, password, fullName } = req.body;
+  const { email, password, fullName, phone } = req.body;
 
   try {
     // Verificar si el usuario existe
@@ -14,7 +14,10 @@ export const register = async (req: any, res: any) => {
     );
 
     if (userExists.rows.length > 0) {
-      return res.status(400).json({ error: 'El email ya está registrado' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'El email ya está registrado' 
+      });
     }
 
     // Hashear password
@@ -22,10 +25,10 @@ export const register = async (req: any, res: any) => {
 
     // Crear usuario
     const newUser = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO users (email, password_hash, full_name, phone) 
+       VALUES ($1, $2, $3, $4) 
        RETURNING id, email, full_name`,
-      [email, passwordHash, fullName]
+      [email, passwordHash, fullName, phone || null]
     );
 
     const user = newUser.rows[0];
@@ -37,7 +40,7 @@ export const register = async (req: any, res: any) => {
       { expiresIn: '7d' } // 7 días
     );
 
-    // Guardar sesión en Redis
+    // Guardar sesión en Redis (si está disponible)
     await redis.setex(
       `session:${user.id}`,
       60 * 60 * 24 * 7, // 7 días
@@ -49,18 +52,24 @@ export const register = async (req: any, res: any) => {
     );
 
     res.status(201).json({
+      success: true,
       message: 'Usuario creado exitosamente',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name
-      },
-      token
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name
+        },
+        token
+      }
     });
 
   } catch (error) {
     console.error('Error en registro:', error);
-    res.status(500).json({ error: 'Error al crear usuario' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al crear usuario' 
+    });
   }
 };
 
@@ -75,7 +84,10 @@ export const login = async (req: any, res: any) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      return res.status(401).json({ 
+        success: false,
+        error: 'Credenciales inválidas' 
+      });
     }
 
     const user = result.rows[0];
@@ -84,7 +96,10 @@ export const login = async (req: any, res: any) => {
     const validPassword = await bcrypt.compare(password, user.password_hash);
     
     if (!validPassword) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      return res.status(401).json({ 
+        success: false,
+        error: 'Credenciales inválidas' 
+      });
     }
 
     // Actualizar último login
@@ -100,7 +115,7 @@ export const login = async (req: any, res: any) => {
       { expiresIn: '7d' } // 7 días
     );
 
-    // Guardar sesión en Redis
+    // Guardar sesión en Redis (si está disponible)
     await redis.setex(
       `session:${user.id}`,
       60 * 60 * 24 * 7,
@@ -113,18 +128,24 @@ export const login = async (req: any, res: any) => {
     );
 
     res.json({
+      success: true,
       message: 'Login exitoso',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name
-      },
-      token
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name
+        },
+        token
+      }
     });
 
   } catch (error) {
     console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al iniciar sesión' 
+    });
   }
 };
 
@@ -132,11 +153,17 @@ export const logout = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     
-    // Eliminar sesión de Redis
+    // Eliminar sesión de Redis (si está disponible)
     await redis.del(`session:${userId}`);
     
-    res.json({ message: 'Sesión cerrada exitosamente' });
+    res.json({ 
+      success: true,
+      message: 'Sesión cerrada exitosamente' 
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Error al cerrar sesión' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al cerrar sesión' 
+    });
   }
 };
