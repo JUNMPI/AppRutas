@@ -15,10 +15,15 @@ app.use(cors({
   origin: [
     'http://localhost:8081',
     'http://localhost:19006',
-    'exp://192.168.1.100:8081',
+    'http://192.168.100.4:8081',      // ← IP corregida
+    'http://192.168.100.4:19006',     // ← Agregada también
+    'exp://192.168.100.4:8081',       // ← IP corregida
+    'exp://localhost:8081',
     process.env.FRONTEND_URL || ''
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -48,7 +53,7 @@ app.use((err: any, req: any, res: any, next: any) => {
 app.listen(PORT, () => {
   console.log(`
     🚀 Servidor corriendo en http://localhost:${PORT}
-    📱 Para Expo: exp://192.168.1.100:${PORT}
+    📱 Para Expo: exp://192.168.100.4:${PORT}    ← IP corregida
     🔥 Ambiente: ${process.env.NODE_ENV}
   `);
 });
