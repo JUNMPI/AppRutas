@@ -10,8 +10,14 @@ export default function HomeScreen() {
   }, []);
 
   const loadUserName = async () => {
-    const name = await AsyncStorage.getItem('userName');
-    setUserName(name || 'Usuario');
+    try {
+      const name = await AsyncStorage.getItem('userName');
+      console.log('Nombre cargado de AsyncStorage:', name);
+      setUserName(name || 'Usuario');
+    } catch (error) {
+      console.error('Error cargando nombre:', error);
+      setUserName('Usuario');
+    }
   };
 
   return (

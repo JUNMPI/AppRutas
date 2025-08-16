@@ -2,14 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function LoginScreen() {
@@ -26,15 +26,35 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      await AsyncStorage.setItem('authToken', 'fake-jwt-token');
-      await AsyncStorage.setItem('userEmail', email);
+      const response = await fetch('http://192.168.100.4:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password: password,
+        }),
+      });
 
-      router.replace('/(tabs)');
-      
+      const data = await response.json();
+      console.log('Respuesta login:', data);
+
+      if (response.ok && data.success) {
+        // Guardar datos correctamente
+        await AsyncStorage.setItem('authToken', data.data.token);
+        await AsyncStorage.setItem('userEmail', data.data.user.email);
+        await AsyncStorage.setItem('userName', data.data.user.fullName || 'Usuario');
+
+        console.log('Nombre guardado:', data.data.user.fullName);
+        
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Error', data.error || 'Credenciales inválidas');
+      }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo iniciar sesión');
+      console.error('Error en login:', error);
+      Alert.alert('Error', 'No se pudo conectar con el servidor');
     } finally {
       setIsLoading(false);
     }
