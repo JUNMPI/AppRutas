@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import api from '../../services/api';
 
 interface UserProfile {
   id: string;
@@ -36,31 +35,92 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadUserProfile();
-    loadUserStats();
+    loadUserData();
   }, []);
 
-  const loadUserProfile = async () => {
+  const makeAPICall = async (endpoint: string, method: string = 'GET', body?: any) => {
     try {
-      const response = await api.get('/user/profile');
-      if (response.data.success) {
-        setUser(response.data.data);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No token found');
       }
+
+      const response = await fetch(`http://192.168.100.4:5000/api${endpoint}`, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return await response.json();
     } catch (error) {
-      console.error('Error cargando perfil:', error);
+      console.error('API Error:', error);
+      throw error;
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        console.log('No hay token, redirigiendo al login');
+        router.replace('/(auth)/login');
+        return;
+      }
+
+      console.log('Token encontrado, cargando datos del usuario...');
+      
+      // Cargar perfil
+      try {
+        const profileData = await makeAPICall('/user/profile');
+        if (profileData?.success) {
+          setUser(profileData.data);
+          console.log('Perfil cargado:', profileData.data.full_name);
+        }
+      } catch (profileError) {
+        console.log('Error en perfil:', profileError);
+      }
+
+      // Cargar estadísticas
+      try {
+        const statsData = await makeAPICall('/user/stats');
+        if (statsData?.success) {
+          setStats(statsData.data);
+        }
+      } catch (statsError) {
+        console.log('Error en stats:', statsError);
+      }
+
+    } catch (error: any) {
+      console.error('Error cargando datos:', error);
+      
+      if (error.message.includes('401')) {
+        console.log('Token inválido, limpiando sesión...');
+        await clearSession();
+        router.replace('/(auth)/login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const loadUserStats = async () => {
+  const clearSession = async () => {
     try {
-      const response = await api.get('/user/stats');
-      if (response.data.success) {
-        setStats(response.data.data);
-      }
+      await AsyncStorage.multiRemove([
+        'authToken',
+        'userEmail', 
+        'userName'
+      ]);
+      console.log('Sesión limpiada');
     } catch (error) {
-      console.error('Error cargando estadísticas:', error);
+      console.error('Error limpiando sesión:', error);
     }
   };
 
@@ -75,11 +135,21 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.post('/auth/logout');
-              await AsyncStorage.clear();
+              // Intentar hacer logout en el servidor
+              await makeAPICall('/auth/logout', 'POST').catch(() => {
+                console.log('Logout del servidor falló, pero continuando...');
+              });
+              
+              // Limpiar datos locales
+              await clearSession();
+              
+              // Redirigir al login
               router.replace('/(auth)/login');
             } catch (error) {
               console.error('Error al cerrar sesión:', error);
+              // Aunque falle, limpiar sesión local
+              await clearSession();
+              router.replace('/(auth)/login');
             }
           }
         }
@@ -87,52 +157,37 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Eliminar Cuenta',
-      'Esta acción es irreversible. ¿Estás seguro?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            Alert.prompt(
-              'Confirmar con Contraseña',
-              'Ingresa tu contraseña para confirmar:',
-              async (password) => {
-                if (password) {
-                  try {
-                    await api.delete('/user/account', {
-                      data: { password }
-                    });
-                    await AsyncStorage.clear();
-                    router.replace('/(auth)/login');
-                  } catch (error) {
-                    Alert.alert('Error', 'No se pudo eliminar la cuenta');
-                  }
-                }
-              },
-              'secure-text'
-            );
-          }
-        }
-      ]
-    );
+  const handleGoToLogin = () => {
+    router.replace('/(auth)/login');
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Cargando...</Text>
+        <Text style={styles.loadingText}>Cargando...</Text>
       </View>
     );
   }
 
+  // Si no hay usuario autenticado
   if (!user) {
     return (
       <View style={styles.container}>
-        <Text>No se pudo cargar el perfil</Text>
+        <View style={styles.notAuthenticatedContainer}>
+          <Ionicons name="person-circle-outline" size={80} color="#bdc3c7" />
+          <Text style={styles.notAuthenticatedTitle}>No hay sesión activa</Text>
+          <Text style={styles.notAuthenticatedText}>
+            Por favor inicia sesión para ver tu perfil
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.loginButton}
+            onPress={handleGoToLogin}
+          >
+            <Ionicons name="log-in" size={20} color="white" />
+            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -244,27 +299,6 @@ export default function ProfileScreen() {
 
       {/* Acciones */}
       <View style={styles.actionsSection}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => {
-          Alert.alert('Info', 'Función de editar perfil próximamente');
-        }}>
-          <Ionicons name="create" size={20} color="#3498db" />
-          <Text style={styles.actionButtonText}>Editar Perfil</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={() => {
-          Alert.alert('Info', 'Función de cambiar contraseña próximamente');
-        }}>
-          <Ionicons name="key" size={20} color="#f39c12" />
-          <Text style={styles.actionButtonText}>Cambiar Contraseña</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton} onPress={() => {
-          Alert.alert('Info', 'Función de configuración próximamente');
-        }}>
-          <Ionicons name="settings" size={20} color="#9b59b6" />
-          <Text style={styles.actionButtonText}>Configuración</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity 
           style={[styles.actionButton, styles.logoutButton]} 
           onPress={handleLogout}
@@ -272,16 +306,6 @@ export default function ProfileScreen() {
           <Ionicons name="log-out" size={20} color="#e74c3c" />
           <Text style={[styles.actionButtonText, { color: '#e74c3c' }]}>
             Cerrar Sesión
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.deleteButton]} 
-          onPress={handleDeleteAccount}
-        >
-          <Ionicons name="trash" size={20} color="#c0392b" />
-          <Text style={[styles.actionButtonText, { color: '#c0392b' }]}>
-            Eliminar Cuenta
           </Text>
         </TouchableOpacity>
       </View>
@@ -298,6 +322,44 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  notAuthenticatedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+  },
+  notAuthenticatedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  notAuthenticatedText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  loginButton: {
+    backgroundColor: '#3498db',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   header: {
     backgroundColor: '#3498db',
@@ -410,10 +472,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e74c3c',
     backgroundColor: '#fff5f5',
-  },
-  deleteButton: {
-    borderWidth: 1,
-    borderColor: '#c0392b',
-    backgroundColor: '#fff2f2',
   },
 });
