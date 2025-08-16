@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import api from '../../services/api';
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -86,18 +85,33 @@ export default function RegisterScreen() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/register', {
+      // Crear el objeto de datos correctamente
+      const requestData = {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
-        full_name: formData.fullName.trim(),
+        full_name: formData.fullName.trim(), // Cambiado de fullName a full_name
         phone: formData.phone.trim() || undefined
+      };
+
+      console.log('Enviando datos:', requestData);
+
+      // Hacer la petición directamente sin usar el servicio api
+      const response = await fetch('http://192.168.100.4:5000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
       });
 
-      if (response.data.success) {
+      const data = await response.json();
+      console.log('Respuesta del servidor:', data);
+
+      if (response.ok && data.success) {
         // Guardar datos de sesión
-        await AsyncStorage.setItem('authToken', response.data.data.token);
-        await AsyncStorage.setItem('userEmail', response.data.data.user.email);
-        await AsyncStorage.setItem('userName', response.data.data.user.fullName);
+        await AsyncStorage.setItem('authToken', data.data.token);
+        await AsyncStorage.setItem('userEmail', data.data.user.email);
+        await AsyncStorage.setItem('userName', data.data.user.fullName);
 
         Alert.alert(
           '¡Registro Exitoso!', 
@@ -109,18 +123,16 @@ export default function RegisterScreen() {
             }
           ]
         );
+      } else {
+        Alert.alert('Error', data.error || 'No se pudo crear la cuenta');
       }
     } catch (error: any) {
       console.error('Error en registro:', error);
       
-      let errorMessage = 'No se pudo crear la cuenta. Inténtalo de nuevo.';
+      let errorMessage = 'No se pudo conectar con el servidor';
       
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.status === 400) {
-        errorMessage = 'El email ya está registrado o los datos son inválidos';
-      } else if (error.response?.status >= 500) {
-        errorMessage = 'Error del servidor. Inténtalo más tarde.';
+      if (error.message.includes('Network')) {
+        errorMessage = 'Error de red. Verifica tu conexión';
       }
       
       Alert.alert('Error', errorMessage);
@@ -280,16 +292,6 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* Términos y condiciones */}
-          <View style={styles.footer}>
-            <Text style={styles.termsText}>
-              Al crear una cuenta, aceptas nuestros{' '}
-              <Text style={styles.termsLink}>Términos de Servicio</Text>
-              {' '}y{' '}
-              <Text style={styles.termsLink}>Política de Privacidad</Text>
-            </Text>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -421,20 +423,6 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: '#3498db',
     fontSize: 16,
-    fontWeight: '500',
-  },
-  footer: {
-    marginTop: 30,
-    paddingHorizontal: 20,
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  termsLink: {
-    color: '#3498db',
     fontWeight: '500',
   },
 });
