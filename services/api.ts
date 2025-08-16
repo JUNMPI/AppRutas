@@ -8,7 +8,7 @@ const getBaseURL = () => {
     return __DEV__ ? 'http://10.0.2.2:5000/api' : 'http://192.168.100.4:5000/api';
   } else if (Platform.OS === 'ios') {
     // Para simulador iOS
-    return 'http://localhost:5000/api';
+    return 'exp://ohp8e-m-anonymous-8081.exp.direct';
   } else {
     // Para dispositivo físico o web
     return 'http://192.168.100.4:5000/api';
