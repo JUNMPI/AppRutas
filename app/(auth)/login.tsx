@@ -11,8 +11,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -64,54 +66,130 @@ export default function LoginScreen() {
     router.push('/(auth)/register');
   };
 
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 30,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginBottom: 10,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    form: {
+      backgroundColor: colors.cardBackground,
+      padding: 30,
+      borderRadius: 15,
+      shadowColor: colors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 5,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+      marginTop: 15,
+    },
+    input: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      padding: 15,
+      fontSize: 16,
+      color: colors.text,
+    },
+    loginButton: {
+      backgroundColor: colors.tint,
+      paddingVertical: 15,
+      borderRadius: 10,
+      marginTop: 25,
+      alignItems: 'center',
+    },
+    loginButtonDisabled: {
+      backgroundColor: colors.textSecondary,
+    },
+    loginButtonText: {
+      color: 'white',
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    registerButton: {
+      marginTop: 20,
+      alignItems: 'center',
+    },
+    registerButtonText: {
+      color: colors.tint,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+  });
+
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={dynamicStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
+      <View style={dynamicStyles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>🗺️ Mis Rutas</Text>
-          <Text style={styles.subtitle}>Planifica tus rutas diarias</Text>
+          <Text style={dynamicStyles.title}>🗺️ Mis Rutas</Text>
+          <Text style={dynamicStyles.subtitle}>Planifica tus rutas diarias</Text>
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
+        <View style={dynamicStyles.form}>
+          <Text style={dynamicStyles.label}>Email</Text>
           <TextInput
-            style={styles.input}
+            style={dynamicStyles.input}
             placeholder="tu@email.com"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textSecondary}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
 
-          <Text style={styles.label}>Contraseña</Text>
+          <Text style={dynamicStyles.label}>Contraseña</Text>
           <TextInput
-            style={styles.input}
+            style={dynamicStyles.input}
             placeholder="Tu contraseña"
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textSecondary}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
 
           <TouchableOpacity 
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            style={[dynamicStyles.loginButton, isLoading && dynamicStyles.loginButtonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>
+            <Text style={dynamicStyles.loginButtonText}>
               {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.registerButton}
+            style={dynamicStyles.registerButton}
             onPress={handleRegister}
           >
-            <Text style={styles.registerButtonText}>
+            <Text style={dynamicStyles.registerButtonText}>
               ¿No tienes cuenta? Regístrate
             </Text>
           </TouchableOpacity>
@@ -122,81 +200,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 30,
-  },
   header: {
     alignItems: 'center',
     marginBottom: 50,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
-  },
-  form: {
-    backgroundColor: 'white',
-    padding: 30,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 8,
-    marginTop: 15,
-  },
-  input: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-    color: '#2c3e50',
-  },
-  loginButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 15,
-    borderRadius: 10,
-    marginTop: 25,
-    alignItems: 'center',
-  },
-  loginButtonDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
-  loginButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  registerButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  registerButtonText: {
-    color: '#3498db',
-    fontSize: 16,
-    fontWeight: '500',
   },
 });

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 
 // Importación condicional de MapView
 let MapView: any = View;
@@ -34,6 +35,7 @@ interface Waypoint {
 }
 
 export default function MapScreen() {
+  const { colors } = useTheme();
   const [region, setRegion] = useState({
     latitude: -6.7775,
     longitude: -79.8451,
@@ -50,11 +52,7 @@ export default function MapScreen() {
 
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-  useEffect(() => {
-    getCurrentLocation();
-  }, []);
-
-  const getCurrentLocation = async () => {
+  const getCurrentLocation = useCallback(async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -72,7 +70,11 @@ export default function MapScreen() {
     } catch (error) {
       console.error('Error obteniendo ubicación:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    getCurrentLocation();
+  }, [getCurrentLocation]);
 
   const handleMapPress = (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
@@ -142,16 +144,191 @@ export default function MapScreen() {
     setRouteName('');
   };
 
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    webContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+      backgroundColor: colors.background,
+    },
+    webTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginTop: 20,
+      marginBottom: 10,
+    },
+    webText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 30,
+    },
+    webButton: {
+      backgroundColor: colors.tint,
+      paddingHorizontal: 30,
+      paddingVertical: 15,
+      borderRadius: 10,
+    },
+    infoPanel: {
+      position: 'absolute',
+      top: 50,
+      left: 20,
+      right: 20,
+      backgroundColor: colors.cardBackground + 'E6', // Semi-transparent
+      padding: 10,
+      borderRadius: 10,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    infoText: {
+      color: colors.text,
+      textAlign: 'center',
+      fontSize: 14,
+    },
+    waypointsList: {
+      position: 'absolute',
+      top: 100,
+      right: 20,
+      backgroundColor: colors.cardBackground,
+      borderRadius: 10,
+      padding: 10,
+      maxHeight: 200,
+      minWidth: 200,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    waypointItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    waypointOrder: {
+      backgroundColor: colors.tint,
+      color: 'white',
+      width: 25,
+      height: 25,
+      borderRadius: 12.5,
+      textAlign: 'center',
+      lineHeight: 25,
+      fontWeight: 'bold',
+      marginRight: 10,
+    },
+    waypointName: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.text,
+    },
+    modalContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalContent: {
+      backgroundColor: colors.cardBackground,
+      margin: 20,
+      padding: 20,
+      borderRadius: 15,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginBottom: 20,
+      color: colors.text,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 5,
+      marginTop: 15,
+      color: colors.text,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      padding: 15,
+      fontSize: 16,
+      marginBottom: 15,
+      backgroundColor: colors.background,
+      color: colors.text,
+    },
+    dayButton: {
+      paddingHorizontal: 15,
+      paddingVertical: 8,
+      borderRadius: 20,
+      backgroundColor: colors.background,
+      marginRight: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    dayButtonSelected: {
+      backgroundColor: colors.tint,
+      borderColor: colors.tint,
+    },
+    dayButtonText: {
+      fontSize: 12,
+      color: colors.text,
+    },
+    dayButtonTextSelected: {
+      color: 'white',
+      fontWeight: 'bold',
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 20,
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 15,
+      borderRadius: 10,
+      marginHorizontal: 5,
+    },
+    cancelButton: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    addButton: {
+      backgroundColor: colors.tint,
+    },
+    cancelButtonText: {
+      textAlign: 'center',
+      color: colors.text,
+      fontWeight: '600',
+    },
+    addButtonText: {
+      textAlign: 'center',
+      color: 'white',
+      fontWeight: '600',
+    },
+  });
+
   // Si estamos en web, mostramos un mensaje alternativo
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.webContainer}>
-        <Ionicons name="map-outline" size={80} color="#3498db" />
-        <Text style={styles.webTitle}>Mapas no disponibles en Web</Text>
-        <Text style={styles.webText}>
+      <View style={dynamicStyles.webContainer}>
+        <Ionicons name="map-outline" size={80} color={colors.tint} />
+        <Text style={dynamicStyles.webTitle}>Mapas no disponibles en Web</Text>
+        <Text style={dynamicStyles.webText}>
           Por favor usa la aplicación móvil para acceder a las funciones del mapa
         </Text>
-        <TouchableOpacity style={styles.webButton}>
+        <TouchableOpacity style={dynamicStyles.webButton}>
           <Text style={styles.webButtonText}>Descargar App Móvil</Text>
         </TouchableOpacity>
       </View>
@@ -159,7 +336,7 @@ export default function MapScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       <MapView
         style={styles.map}
         region={region}
@@ -186,15 +363,15 @@ export default function MapScreen() {
               latitude: wp.latitude,
               longitude: wp.longitude,
             }))}
-            strokeColor="#3498db"
+            strokeColor={colors.tint}
             strokeWidth={3}
           />
         )}
       </MapView>
 
       {/* Panel de información */}
-      <View style={styles.infoPanel}>
-        <Text style={styles.infoText}>
+      <View style={dynamicStyles.infoPanel}>
+        <Text style={dynamicStyles.infoText}>
           Puntos: {waypoints.length} | Toca el mapa para agregar puntos
         </Text>
       </View>
@@ -202,13 +379,13 @@ export default function MapScreen() {
       {/* Controles */}
       <View style={styles.controls}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity style={styles.controlButton} onPress={getCurrentLocation}>
+          <TouchableOpacity style={[styles.controlButton, { backgroundColor: colors.tint }]} onPress={getCurrentLocation}>
             <Ionicons name="location" size={20} color="white" />
             <Text style={styles.controlButtonText}>Mi Ubicación</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.controlButton, { backgroundColor: '#e74c3c' }]} 
+            style={[styles.controlButton, { backgroundColor: colors.danger }]} 
             onPress={clearRoute}
           >
             <Ionicons name="trash" size={20} color="white" />
@@ -217,7 +394,7 @@ export default function MapScreen() {
           
           {waypoints.length >= 2 && (
             <TouchableOpacity 
-              style={[styles.controlButton, { backgroundColor: '#27ae60' }]} 
+              style={[styles.controlButton, { backgroundColor: colors.success }]} 
               onPress={saveRoute}
             >
               <Ionicons name="save" size={20} color="white" />
@@ -229,19 +406,19 @@ export default function MapScreen() {
 
       {/* Lista de waypoints */}
       {waypoints.length > 0 && (
-        <View style={styles.waypointsList}>
+        <View style={dynamicStyles.waypointsList}>
           <ScrollView>
             {waypoints.map((waypoint, index) => (
-              <View key={waypoint.id} style={styles.waypointItem}>
+              <View key={waypoint.id} style={dynamicStyles.waypointItem}>
                 <View style={styles.waypointInfo}>
-                  <Text style={styles.waypointOrder}>{index + 1}</Text>
-                  <Text style={styles.waypointName}>{waypoint.name}</Text>
+                  <Text style={dynamicStyles.waypointOrder}>{index + 1}</Text>
+                  <Text style={dynamicStyles.waypointName}>{waypoint.name}</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => removeWaypoint(waypoint.id)}
                   style={styles.removeButton}
                 >
-                  <Ionicons name="close" size={20} color="#e74c3c" />
+                  <Ionicons name="close" size={20} color={colors.danger} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -256,41 +433,43 @@ export default function MapScreen() {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Agregar Punto</Text>
+        <View style={dynamicStyles.modalContainer}>
+          <View style={dynamicStyles.modalContent}>
+            <Text style={dynamicStyles.modalTitle}>Agregar Punto</Text>
             
             <TextInput
-              style={styles.input}
+              style={dynamicStyles.input}
               placeholder="Nombre del punto (ej: Casa, Trabajo)"
+              placeholderTextColor={colors.textSecondary}
               value={waypointName}
               onChangeText={setWaypointName}
             />
 
             {waypoints.length === 0 && (
               <>
-                <Text style={styles.label}>Nombre de la ruta:</Text>
+                <Text style={dynamicStyles.label}>Nombre de la ruta:</Text>
                 <TextInput
-                  style={styles.input}
+                  style={dynamicStyles.input}
                   placeholder="Ej: Ruta al trabajo"
+                  placeholderTextColor={colors.textSecondary}
                   value={routeName}
                   onChangeText={setRouteName}
                 />
 
-                <Text style={styles.label}>Día de la semana:</Text>
+                <Text style={dynamicStyles.label}>Día de la semana:</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {dayNames.map((day, index) => (
                     <TouchableOpacity
                       key={index}
                       style={[
-                        styles.dayButton,
-                        selectedDay === index && styles.dayButtonSelected
+                        dynamicStyles.dayButton,
+                        selectedDay === index && dynamicStyles.dayButtonSelected
                       ]}
                       onPress={() => setSelectedDay(index)}
                     >
                       <Text style={[
-                        styles.dayButtonText,
-                        selectedDay === index && styles.dayButtonTextSelected
+                        dynamicStyles.dayButtonText,
+                        selectedDay === index && dynamicStyles.dayButtonTextSelected
                       ]}>
                         {day}
                       </Text>
@@ -300,23 +479,23 @@ export default function MapScreen() {
               </>
             )}
 
-            <View style={styles.modalButtons}>
+            <View style={dynamicStyles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[dynamicStyles.modalButton, dynamicStyles.cancelButton]}
                 onPress={() => {
                   setModalVisible(false);
                   setWaypointName('');
                   setSelectedLocation(null);
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                <Text style={dynamicStyles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[styles.modalButton, styles.addButton]}
+                style={[dynamicStyles.modalButton, dynamicStyles.addButton]}
                 onPress={addWaypoint}
               >
-                <Text style={styles.addButtonText}>Agregar</Text>
+                <Text style={dynamicStyles.addButtonText}>Agregar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -327,56 +506,13 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  map: {
     flex: 1,
-  },
-  webContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  webTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  webText: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  webButton: {
-    backgroundColor: '#3498db',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 10,
   },
   webButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  map: {
-    flex: 1,
-  },
-  infoPanel: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    padding: 10,
-    borderRadius: 10,
-  },
-  infoText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 14,
   },
   controls: {
     position: 'absolute',
@@ -386,7 +522,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   controlButton: {
-    backgroundColor: '#3498db',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
@@ -399,125 +534,12 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontWeight: '600',
   },
-  waypointsList: {
-    position: 'absolute',
-    top: 100,
-    right: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 10,
-    maxHeight: 200,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  waypointItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
   waypointInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  waypointOrder: {
-    backgroundColor: '#3498db',
-    color: 'white',
-    width: 25,
-    height: 25,
-    borderRadius: 12.5,
-    textAlign: 'center',
-    lineHeight: 25,
-    fontWeight: 'bold',
-    marginRight: 10,
-  },
-  waypointName: {
-    flex: 1,
-    fontSize: 14,
-  },
   removeButton: {
     padding: 5,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    margin: 20,
-    padding: 20,
-    borderRadius: 15,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 5,
-    marginTop: 15,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-    marginBottom: 15,
-  },
-  dayButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    marginRight: 10,
-  },
-  dayButtonSelected: {
-    backgroundColor: '#3498db',
-  },
-  dayButtonText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  dayButtonTextSelected: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 15,
-    borderRadius: 10,
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  addButton: {
-    backgroundColor: '#3498db',
-  },
-  cancelButtonText: {
-    textAlign: 'center',
-    color: '#666',
-    fontWeight: '600',
-  },
-  addButtonText: {
-    textAlign: 'center',
-    color: 'white',
-    fontWeight: '600',
   },
 });

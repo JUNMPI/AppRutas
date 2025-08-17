@@ -1,15 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { useTheme } from '../../hooks/useTheme';
 import api from '../../services/api';
 
 interface Route {
@@ -32,6 +33,7 @@ interface Route {
 }
 
 export default function RoutesScreen() {
+  const { colors } = useTheme();
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -132,13 +134,13 @@ export default function RoutesScreen() {
   };
 
   const renderRoute = ({ item }: { item: Route }) => (
-    <View style={styles.routeCard}>
+    <View style={[styles.routeCard, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
       <View style={styles.routeHeader}>
         <View style={styles.routeInfo}>
-          <Text style={styles.routeName}>{item.name}</Text>
-          <Text style={styles.routeDay}>{dayNamesFull[item.day_of_week]}</Text>
+          <Text style={[styles.routeName, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.routeDay, { color: colors.tint }]}>{dayNamesFull[item.day_of_week]}</Text>
           {item.description && (
-            <Text style={styles.routeDescription}>{item.description}</Text>
+            <Text style={[styles.routeDescription, { color: colors.textSecondary }]}>{item.description}</Text>
           )}
         </View>
         
@@ -146,7 +148,7 @@ export default function RoutesScreen() {
           <TouchableOpacity
             style={[
               styles.statusIndicator,
-              { backgroundColor: item.is_active ? '#27ae60' : '#e74c3c' }
+              { backgroundColor: item.is_active ? colors.success : colors.danger }
             ]}
             onPress={() => toggleRouteStatus(item.id, item.is_active)}
           >
@@ -159,16 +161,16 @@ export default function RoutesScreen() {
 
       <View style={styles.routeDetails}>
         <View style={styles.detailItem}>
-          <Ionicons name="location" size={16} color="#666" />
-          <Text style={styles.detailText}>
+          <Ionicons name="location" size={16} color={colors.textSecondary} />
+          <Text style={[styles.detailText, { color: colors.textSecondary }]}>
             {item.waypoints.length} puntos
           </Text>
         </View>
         
         {item.total_distance && (
           <View style={styles.detailItem}>
-            <Ionicons name="map" size={16} color="#666" />
-            <Text style={styles.detailText}>
+            <Ionicons name="map" size={16} color={colors.textSecondary} />
+            <Text style={[styles.detailText, { color: colors.textSecondary }]}>
               {formatDistance(item.total_distance)}
             </Text>
           </View>
@@ -176,16 +178,16 @@ export default function RoutesScreen() {
         
         {item.start_time && (
           <View style={styles.detailItem}>
-            <Ionicons name="time" size={16} color="#666" />
-            <Text style={styles.detailText}>{item.start_time}</Text>
+            <Ionicons name="time" size={16} color={colors.textSecondary} />
+            <Text style={[styles.detailText, { color: colors.textSecondary }]}>{item.start_time}</Text>
           </View>
         )}
       </View>
 
       {item.waypoints.length > 0 && (
-        <View style={styles.waypointsPreview}>
-          <Text style={styles.waypointsTitle}>Ruta:</Text>
-          <Text style={styles.waypointsText}>
+        <View style={[styles.waypointsPreview, { backgroundColor: colors.background }]}>
+          <Text style={[styles.waypointsTitle, { color: colors.textSecondary }]}>Ruta:</Text>
+          <Text style={[styles.waypointsText, { color: colors.text }]}>
             {item.waypoints
               .sort((a, b) => a.order_index - b.order_index)
               .map(wp => wp.name)
@@ -197,27 +199,27 @@ export default function RoutesScreen() {
 
       <View style={styles.routeActions}>
         <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
+          style={[styles.actionButton, styles.editButton, { backgroundColor: colors.background }]}
           onPress={() => Alert.alert('Info', 'Función de edición pendiente')}
         >
-          <Ionicons name="pencil" size={16} color="#3498db" />
-          <Text style={styles.actionButtonText}>Editar</Text>
+          <Ionicons name="pencil" size={16} color={colors.tint} />
+          <Text style={[styles.actionButtonText, { color: colors.tint }]}>Editar</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.actionButton, styles.duplicateButton]}
+          style={[styles.actionButton, styles.duplicateButton, { backgroundColor: colors.background }]}
           onPress={() => duplicateRoute(item.id, item.name)}
         >
-          <Ionicons name="copy" size={16} color="#f39c12" />
-          <Text style={styles.actionButtonText}>Duplicar</Text>
+          <Ionicons name="copy" size={16} color={colors.warning} />
+          <Text style={[styles.actionButtonText, { color: colors.warning }]}>Duplicar</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
+          style={[styles.actionButton, styles.deleteButton, { backgroundColor: colors.background }]}
           onPress={() => deleteRoute(item.id, item.name)}
         >
-          <Ionicons name="trash" size={16} color="#e74c3c" />
-          <Text style={styles.actionButtonText}>Eliminar</Text>
+          <Ionicons name="trash" size={16} color={colors.danger} />
+          <Text style={[styles.actionButtonText, { color: colors.danger }]}>Eliminar</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -228,13 +230,14 @@ export default function RoutesScreen() {
       <TouchableOpacity
         style={[
           styles.dayFilter,
-          selectedDay === null && styles.dayFilterSelected
+          { backgroundColor: selectedDay === null ? colors.tint : colors.background },
+          { borderColor: colors.border }
         ]}
         onPress={() => setSelectedDay(null)}
       >
         <Text style={[
           styles.dayFilterText,
-          selectedDay === null && styles.dayFilterTextSelected
+          { color: selectedDay === null ? '#ffffff' : colors.text }
         ]}>
           Todos
         </Text>
@@ -245,13 +248,14 @@ export default function RoutesScreen() {
           key={index}
           style={[
             styles.dayFilter,
-            selectedDay === index && styles.dayFilterSelected
+            { backgroundColor: selectedDay === index ? colors.tint : colors.background },
+            { borderColor: colors.border }
           ]}
           onPress={() => setSelectedDay(index)}
         >
           <Text style={[
             styles.dayFilterText,
-            selectedDay === index && styles.dayFilterTextSelected
+            { color: selectedDay === index ? '#ffffff' : colors.text }
           ]}>
             {day}
           </Text>
@@ -262,8 +266,8 @@ export default function RoutesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="map-outline" size={80} color="#bdc3c7" />
-      <Text style={styles.emptyStateTitle}>
+      <Ionicons name="map-outline" size={80} color={colors.textSecondary} />
+      <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
         {selectedDay !== null 
           ? `No hay rutas para ${dayNamesFull[selectedDay]}`
           : searchText 
@@ -271,7 +275,7 @@ export default function RoutesScreen() {
             : 'No tienes rutas guardadas'
         }
       </Text>
-      <Text style={styles.emptyStateText}>
+      <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
         {selectedDay !== null || searchText
           ? 'Prueba con otros filtros o crea una nueva ruta'
           : 'Ve a la pestaña Mapa para crear tu primera ruta'
@@ -280,20 +284,64 @@ export default function RoutesScreen() {
     </View>
   );
 
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.cardBackground,
+      margin: 15,
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      borderRadius: 10,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.text,
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      backgroundColor: colors.cardBackground,
+      paddingVertical: 15,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    statNumber: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.tint,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+  });
+
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Barra de búsqueda */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+      <View style={dynamicStyles.searchContainer}>
+        <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={dynamicStyles.searchInput}
           placeholder="Buscar rutas..."
+          placeholderTextColor={colors.textSecondary}
           value={searchText}
           onChangeText={setSearchText}
         />
         {searchText.length > 0 && (
           <TouchableOpacity onPress={() => setSearchText('')}>
-            <Ionicons name="close" size={20} color="#666" />
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -307,7 +355,12 @@ export default function RoutesScreen() {
         renderItem={renderRoute}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={[colors.tint]}
+            tintColor={colors.tint}
+          />
         }
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={!loading ? renderEmptyState : null}
@@ -316,22 +369,22 @@ export default function RoutesScreen() {
 
       {/* Estadísticas en la parte inferior */}
       {routes.length > 0 && (
-        <View style={styles.statsContainer}>
+        <View style={dynamicStyles.statsContainer}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{routes.length}</Text>
-            <Text style={styles.statLabel}>Rutas</Text>
+            <Text style={dynamicStyles.statNumber}>{routes.length}</Text>
+            <Text style={dynamicStyles.statLabel}>Rutas</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
+            <Text style={dynamicStyles.statNumber}>
               {routes.filter(r => r.is_active).length}
             </Text>
-            <Text style={styles.statLabel}>Activas</Text>
+            <Text style={dynamicStyles.statLabel}>Activas</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>
+            <Text style={dynamicStyles.statNumber}>
               {routes.reduce((sum, r) => sum + r.waypoints.length, 0)}
             </Text>
-            <Text style={styles.statLabel}>Puntos</Text>
+            <Text style={dynamicStyles.statLabel}>Puntos</Text>
           </View>
         </View>
       )}
@@ -340,31 +393,8 @@ export default function RoutesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    margin: 15,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
   searchIcon: {
     marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
   },
   dayFilters: {
     flexDirection: 'row',
@@ -376,30 +406,20 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
     borderRadius: 15,
-    backgroundColor: '#e9ecef',
-  },
-  dayFilterSelected: {
-    backgroundColor: '#3498db',
+    borderWidth: 1,
   },
   dayFilterText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
-  },
-  dayFilterTextSelected: {
-    color: 'white',
-    fontWeight: 'bold',
   },
   listContainer: {
     padding: 15,
     paddingTop: 5,
   },
   routeCard: {
-    backgroundColor: 'white',
     borderRadius: 15,
     padding: 15,
     marginBottom: 15,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -417,18 +437,15 @@ const styles = StyleSheet.create({
   routeName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginBottom: 4,
   },
   routeDay: {
     fontSize: 14,
-    color: '#3498db',
     fontWeight: '600',
     marginBottom: 4,
   },
   routeDescription: {
     fontSize: 14,
-    color: '#7f8c8d',
     fontStyle: 'italic',
   },
   routeStatus: {
@@ -455,11 +472,9 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: '#666',
     marginLeft: 4,
   },
   waypointsPreview: {
-    backgroundColor: '#f8f9fa',
     padding: 10,
     borderRadius: 8,
     marginBottom: 10,
@@ -467,12 +482,10 @@ const styles = StyleSheet.create({
   waypointsTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#666',
     marginBottom: 4,
   },
   waypointsText: {
     fontSize: 12,
-    color: '#2c3e50',
     lineHeight: 16,
   },
   routeActions: {
@@ -489,20 +502,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
     justifyContent: 'center',
   },
-  editButton: {
-    backgroundColor: '#ecf0f1',
-  },
-  duplicateButton: {
-    backgroundColor: '#fdf2e9',
-  },
-  deleteButton: {
-    backgroundColor: '#fadbd8',
-  },
+  editButton: {},
+  duplicateButton: {},
+  deleteButton: {},
   actionButtonText: {
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
-    color: '#2c3e50',
   },
   emptyState: {
     alignItems: 'center',
@@ -512,37 +518,18 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginTop: 15,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#7f8c8d',
     textAlign: 'center',
     paddingHorizontal: 40,
     lineHeight: 20,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
-  },
   statItem: {
     flex: 1,
     alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3498db',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    marginTop: 2,
   },
 });
