@@ -11,6 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ThemeToggle } from '../../components/ThemeToggle';
+import { useTheme } from '../../hooks/useTheme';
 import api from '../../services/api';
 
 interface UserStats {
@@ -30,6 +32,7 @@ interface TodayRoute {
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const { colors } = useTheme(); // Agregar hook de tema
   const [userName, setUserName] = useState<string>('Usuario');
   const [stats, setStats] = useState<UserStats | null>(null);
   const [todayRoutes, setTodayRoutes] = useState<TodayRoute[]>([]);
@@ -141,17 +144,23 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Ionicons name="refresh" size={40} color="#3498db" />
-        <Text style={styles.loadingText}>Cargando tu día...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Ionicons name="refresh" size={40} color={colors.tint} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Cargando tu día...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header con saludo personalizado */}
-      <View style={styles.headerContainer}>
+      <View style={[styles.headerContainer, { backgroundColor: colors.headerBackground }]}>
+        {/* Agregar botón de tema en la esquina */}
+        <View style={styles.headerTop}>
+          <View style={styles.headerTopSpacer} />
+          <ThemeToggle size="medium" />
+        </View>
+
         <View style={styles.greetingSection}>
           <Text style={styles.greetingText}>{getGreeting()}</Text>
           <Text style={styles.userNameText}>{userName}!</Text>
@@ -172,23 +181,23 @@ export default function HomeScreen() {
 
       {/* Estadísticas rápidas */}
       {stats && (
-        <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>📊 Resumen</Text>
+        <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📊 Resumen</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statCard}>
-              <Ionicons name="map" size={28} color="#3498db" />
-              <Text style={styles.statNumber}>{stats.total_routes}</Text>
-              <Text style={styles.statLabel}>Rutas Total</Text>
+              <Ionicons name="map" size={28} color={colors.tint} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>{stats.total_routes}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rutas Total</Text>
             </View>
             <View style={styles.statCard}>
-              <Ionicons name="checkmark-circle" size={28} color="#27ae60" />
-              <Text style={styles.statNumber}>{stats.completed_executions}</Text>
-              <Text style={styles.statLabel}>Completadas</Text>
+              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>{stats.completed_executions}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completadas</Text>
             </View>
             <View style={styles.statCard}>
-              <Ionicons name="speedometer" size={28} color="#e74c3c" />
-              <Text style={styles.statNumber}>{stats.total_distance_km.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Km Recorridos</Text>
+              <Ionicons name="speedometer" size={28} color={colors.danger} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>{stats.total_distance_km.toFixed(1)}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Km Recorridos</Text>
             </View>
           </View>
         </View>
@@ -196,21 +205,21 @@ export default function HomeScreen() {
 
       {/* Rutas de hoy */}
       <View style={styles.todaySection}>
-        <Text style={styles.sectionTitle}>🗓️ Rutas de Hoy ({getDayName()})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>🗓️ Rutas de Hoy ({getDayName()})</Text>
         
         {todayRoutes.length > 0 ? (
           <View style={styles.routesList}>
             {todayRoutes.map((route) => (
-              <View key={route.id} style={styles.routeCard}>
+              <View key={route.id} style={[styles.routeCard, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
                 <View style={styles.routeHeader}>
-                  <Ionicons name="navigate-circle" size={24} color="#3498db" />
+                  <Ionicons name="navigate-circle" size={24} color={colors.tint} />
                   <View style={styles.routeInfo}>
-                    <Text style={styles.routeName}>{route.name}</Text>
-                    <Text style={styles.routeTime}>
+                    <Text style={[styles.routeName, { color: colors.text }]}>{route.name}</Text>
+                    <Text style={[styles.routeTime, { color: colors.textSecondary }]}>
                       {route.start_time ? formatTime(route.start_time) : 'Sin hora definida'}
                     </Text>
                   </View>
-                  <Text style={styles.waypointCount}>
+                  <Text style={[styles.waypointCount, { color: colors.tint }]}>
                     {route.waypoints.length} paradas
                   </Text>
                 </View>
@@ -218,20 +227,20 @@ export default function HomeScreen() {
             ))}
           </View>
         ) : (
-          <View style={styles.noRoutesCard}>
-            <Ionicons name="calendar-outline" size={48} color="#bdc3c7" />
-            <Text style={styles.noRoutesText}>No tienes rutas programadas para hoy</Text>
-            <Text style={styles.noRoutesSubtext}>¡Es un buen momento para crear una nueva ruta!</Text>
+          <View style={[styles.noRoutesCard, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+            <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
+            <Text style={[styles.noRoutesText, { color: colors.text }]}>No tienes rutas programadas para hoy</Text>
+            <Text style={[styles.noRoutesSubtext, { color: colors.textSecondary }]}>¡Es un buen momento para crear una nueva ruta!</Text>
           </View>
         )}
       </View>
 
       {/* Acciones rápidas */}
       <View style={styles.quickActionsSection}>
-        <Text style={styles.sectionTitle}>⚡ Acciones Rápidas</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>⚡ Acciones Rápidas</Text>
         <View style={styles.actionsGrid}>
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#3498db' }]}
+            style={[styles.actionCard, { backgroundColor: colors.tint }]}
             onPress={() => handleQuickAction('create_route')}
           >
             <Ionicons name="add-circle" size={32} color="white" />
@@ -239,7 +248,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#27ae60' }]}
+            style={[styles.actionCard, { backgroundColor: colors.success }]}
             onPress={() => handleQuickAction('view_routes')}
           >
             <Ionicons name="list" size={32} color="white" />
@@ -247,7 +256,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.actionCard, { backgroundColor: '#f39c12' }]}
+            style={[styles.actionCard, { backgroundColor: colors.warning }]}
             onPress={() => handleQuickAction('view_profile')}
           >
             <Ionicons name="person" size={32} color="white" />
@@ -266,11 +275,11 @@ export default function HomeScreen() {
 
       {/* Consejos del día */}
       <View style={styles.tipsSection}>
-        <Text style={styles.sectionTitle}>💡 Consejo del Día</Text>
-        <View style={styles.tipCard}>
-          <Ionicons name="bulb" size={24} color="#f39c12" />
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>💡 Consejo del Día</Text>
+        <View style={[styles.tipCard, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+          <Ionicons name="bulb" size={24} color={colors.warning} />
           <View style={styles.tipContent}>
-            <Text style={styles.tipText}>
+            <Text style={[styles.tipText, { color: colors.text }]}>
               Planifica tus rutas la noche anterior para optimizar tu tiempo y combustible.
             </Text>
           </View>
@@ -286,26 +295,31 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 10,
   },
   headerContainer: {
-    backgroundColor: '#3498db',
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 30,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  headerTopSpacer: {
+    flex: 1,
   },
   greetingSection: {
     marginBottom: 20,
@@ -352,10 +366,8 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     margin: 20,
-    backgroundColor: 'white',
     borderRadius: 15,
     padding: 20,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -364,7 +376,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginBottom: 15,
   },
   statsGrid: {
@@ -378,12 +389,10 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginTop: 8,
   },
   statLabel: {
     fontSize: 12,
-    color: '#7f8c8d',
     textAlign: 'center',
     marginTop: 4,
   },
@@ -395,10 +404,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   routeCard: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 15,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -415,24 +422,19 @@ const styles = StyleSheet.create({
   routeName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
   },
   routeTime: {
     fontSize: 14,
-    color: '#7f8c8d',
     marginTop: 2,
   },
   waypointCount: {
     fontSize: 12,
-    color: '#3498db',
     fontWeight: '500',
   },
   noRoutesCard: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 30,
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -441,13 +443,11 @@ const styles = StyleSheet.create({
   noRoutesText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
     marginTop: 15,
     textAlign: 'center',
   },
   noRoutesSubtext: {
     fontSize: 14,
-    color: '#7f8c8d',
     marginTop: 5,
     textAlign: 'center',
   },
@@ -481,12 +481,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tipCard: {
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -498,7 +496,6 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 14,
-    color: '#2c3e50',
     lineHeight: 20,
   },
   bottomSpacing: {
