@@ -10,6 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ThemeToggle } from '../../components/ThemeToggle';
+import { useTheme } from '../../hooks/useTheme';
 
 interface UserProfile {
   id: string;
@@ -30,6 +32,7 @@ interface UserStats {
 }
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -163,8 +166,8 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Cargando...</Text>
       </View>
     );
   }
@@ -172,16 +175,16 @@ export default function ProfileScreen() {
   // Si no hay usuario autenticado
   if (!user) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.notAuthenticatedContainer}>
-          <Ionicons name="person-circle-outline" size={80} color="#bdc3c7" />
-          <Text style={styles.notAuthenticatedTitle}>No hay sesión activa</Text>
-          <Text style={styles.notAuthenticatedText}>
+          <Ionicons name="person-circle-outline" size={80} color={colors.textSecondary} />
+          <Text style={[styles.notAuthenticatedTitle, { color: colors.text }]}>No hay sesión activa</Text>
+          <Text style={[styles.notAuthenticatedText, { color: colors.textSecondary }]}>
             Por favor inicia sesión para ver tu perfil
           </Text>
           
           <TouchableOpacity 
-            style={styles.loginButton}
+            style={[styles.loginButton, { backgroundColor: colors.tint }]}
             onPress={handleGoToLogin}
           >
             <Ionicons name="log-in" size={20} color="white" />
@@ -193,11 +196,16 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header del Perfil */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.headerBackground }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerTopSpacer} />
+          <ThemeToggle size="medium" />
+        </View>
+        
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
             <Text style={styles.avatarText}>
               {user.full_name?.charAt(0).toUpperCase() || 'U'}
             </Text>
@@ -209,65 +217,65 @@ export default function ProfileScreen() {
 
       {/* Estadísticas */}
       {stats && (
-        <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Estadísticas</Text>
+        <View style={[styles.statsContainer, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Estadísticas</Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Ionicons name="map" size={24} color="#3498db" />
-              <Text style={styles.statNumber}>{stats.total_routes}</Text>
-              <Text style={styles.statLabel}>Rutas</Text>
+              <Ionicons name="map" size={24} color={colors.tint} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>{stats.total_routes}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rutas</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="checkmark-circle" size={24} color="#27ae60" />
-              <Text style={styles.statNumber}>{stats.completed_executions}</Text>
-              <Text style={styles.statLabel}>Completadas</Text>
+              <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>{stats.completed_executions}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completadas</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="navigate" size={24} color="#e74c3c" />
-              <Text style={styles.statNumber}>{stats.total_distance_km.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Km Total</Text>
+              <Ionicons name="navigate" size={24} color={colors.danger} />
+              <Text style={[styles.statNumber, { color: colors.text }]}>{stats.total_distance_km.toFixed(1)}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Km Total</Text>
             </View>
           </View>
         </View>
       )}
 
       {/* Información del Perfil */}
-      <View style={styles.infoSection}>
-        <Text style={styles.sectionTitle}>Información Personal</Text>
+      <View style={[styles.infoSection, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Información Personal</Text>
         
-        <View style={styles.infoItem}>
-          <Ionicons name="person" size={20} color="#666" />
+        <View style={[styles.infoItem, { borderBottomColor: colors.border }]}>
+          <Ionicons name="person" size={20} color={colors.textSecondary} />
           <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Nombre Completo</Text>
-            <Text style={styles.infoValue}>{user.full_name}</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Nombre Completo</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{user.full_name}</Text>
           </View>
         </View>
 
-        <View style={styles.infoItem}>
-          <Ionicons name="mail" size={20} color="#666" />
+        <View style={[styles.infoItem, { borderBottomColor: colors.border }]}>
+          <Ionicons name="mail" size={20} color={colors.textSecondary} />
           <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{user.email}</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Email</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{user.email}</Text>
           </View>
         </View>
 
         {user.phone && (
-          <View style={styles.infoItem}>
-            <Ionicons name="call" size={20} color="#666" />
+          <View style={[styles.infoItem, { borderBottomColor: colors.border }]}>
+            <Ionicons name="call" size={20} color={colors.textSecondary} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Teléfono</Text>
-              <Text style={styles.infoValue}>{user.phone}</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Teléfono</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{user.phone}</Text>
             </View>
           </View>
         )}
 
-        <View style={styles.infoItem}>
-          <Ionicons name="shield-checkmark" size={20} color="#666" />
+        <View style={[styles.infoItem, { borderBottomColor: colors.border }]}>
+          <Ionicons name="shield-checkmark" size={20} color={colors.textSecondary} />
           <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Estado de Email</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Estado de Email</Text>
             <Text style={[
               styles.infoValue,
-              { color: user.email_verified ? '#27ae60' : '#f39c12' }
+              { color: user.email_verified ? colors.success : colors.warning }
             ]}>
               {user.email_verified ? 'Verificado' : 'Pendiente'}
             </Text>
@@ -275,22 +283,22 @@ export default function ProfileScreen() {
         </View>
 
         {user.last_login && (
-          <View style={styles.infoItem}>
-            <Ionicons name="time" size={20} color="#666" />
+          <View style={[styles.infoItem, { borderBottomColor: colors.border }]}>
+            <Ionicons name="time" size={20} color={colors.textSecondary} />
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Último Acceso</Text>
-              <Text style={styles.infoValue}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Último Acceso</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>
                 {new Date(user.last_login).toLocaleString()}
               </Text>
             </View>
           </View>
         )}
 
-        <View style={styles.infoItem}>
-          <Ionicons name="calendar" size={20} color="#666" />
+        <View style={[styles.infoItem, { borderBottomColor: 'transparent' }]}>
+          <Ionicons name="calendar" size={20} color={colors.textSecondary} />
           <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Miembro Desde</Text>
-            <Text style={styles.infoValue}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Miembro Desde</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>
               {new Date(user.created_at).toLocaleDateString()}
             </Text>
           </View>
@@ -300,11 +308,11 @@ export default function ProfileScreen() {
       {/* Acciones */}
       <View style={styles.actionsSection}>
         <TouchableOpacity 
-          style={[styles.actionButton, styles.logoutButton]} 
+          style={[styles.actionButton, styles.logoutButton, { backgroundColor: colors.cardBackground, borderColor: colors.danger, shadowColor: colors.shadow }]} 
           onPress={handleLogout}
         >
-          <Ionicons name="log-out" size={20} color="#e74c3c" />
-          <Text style={[styles.actionButtonText, { color: '#e74c3c' }]}>
+          <Ionicons name="log-out" size={20} color={colors.danger} />
+          <Text style={[styles.actionButtonText, { color: colors.danger }]}>
             Cerrar Sesión
           </Text>
         </TouchableOpacity>
@@ -316,17 +324,14 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
   },
   notAuthenticatedContainer: {
     flex: 1,
@@ -337,18 +342,15 @@ const styles = StyleSheet.create({
   notAuthenticatedTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginTop: 20,
     marginBottom: 10,
   },
   notAuthenticatedText: {
     fontSize: 16,
-    color: '#7f8c8d',
     textAlign: 'center',
     marginBottom: 30,
   },
   loginButton: {
-    backgroundColor: '#3498db',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 30,
@@ -362,9 +364,19 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   header: {
-    backgroundColor: '#3498db',
     paddingVertical: 30,
     alignItems: 'center',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  headerTopSpacer: {
+    flex: 1,
   },
   avatarContainer: {
     alignItems: 'center',
@@ -373,7 +385,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#2980b9',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -394,15 +405,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   statsContainer: {
-    backgroundColor: 'white',
     margin: 15,
     padding: 20,
     borderRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginBottom: 15,
   },
   statsGrid: {
@@ -415,27 +428,27 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2c3e50',
     marginTop: 5,
   },
   statLabel: {
     fontSize: 12,
-    color: '#7f8c8d',
     marginTop: 2,
   },
   infoSection: {
-    backgroundColor: 'white',
     margin: 15,
     marginTop: 0,
     padding: 20,
     borderRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
   },
   infoContent: {
     marginLeft: 15,
@@ -443,11 +456,9 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#7f8c8d',
   },
   infoValue: {
     fontSize: 16,
-    color: '#2c3e50',
     marginTop: 2,
   },
   actionsSection: {
@@ -455,22 +466,22 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   actionButton: {
-    backgroundColor: 'white',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   actionButtonText: {
     fontSize: 16,
-    color: '#2c3e50',
     marginLeft: 15,
     fontWeight: '500',
   },
   logoutButton: {
     borderWidth: 1,
-    borderColor: '#e74c3c',
-    backgroundColor: '#fff5f5',
   },
 });
