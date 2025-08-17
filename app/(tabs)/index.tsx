@@ -4,23 +4,14 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  phone?: string;
-  is_active: boolean;
-  email_verified: boolean;
-  last_login?: string;
-  created_at: string;
-}
+import api from '../../services/api';
 
 interface UserStats {
   total_routes: number;
@@ -29,286 +20,265 @@ interface UserStats {
   routes_by_day: Record<string, number>;
 }
 
-export default function ProfileScreen() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+interface TodayRoute {
+  id: string;
+  name: string;
+  start_time?: string;
+  waypoints: any[];
+}
+
+const { width } = Dimensions.get('window');
+
+export default function HomeScreen() {
+  const [userName, setUserName] = useState<string>('Usuario');
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [todayRoutes, setTodayRoutes] = useState<TodayRoute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     loadUserData();
+    loadTodayRoutes();
+    
+    // Actualizar hora cada minuto
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
   }, []);
-
-  const makeAPICall = async (endpoint: string, method: string = 'GET', body?: any) => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('No token found');
-      }
-
-      const response = await fetch(`http://192.168.100.4:5000/api${endpoint}`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
-  };
 
   const loadUserData = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      
-      if (!token) {
-        console.log('No hay token, redirigiendo al login');
-        router.replace('/(auth)/login');
-        return;
+      // Cargar nombre del usuario del almacenamiento local
+      const storedName = await AsyncStorage.getItem('userName');
+      if (storedName) {
+        setUserName(storedName);
       }
 
-      console.log('Token encontrado, cargando datos del usuario...');
-      
-      // Cargar perfil
-      try {
-        const profileData = await makeAPICall('/user/profile');
-        if (profileData?.success) {
-          setUser(profileData.data);
-          console.log('Perfil cargado:', profileData.data.full_name);
-        }
-      } catch (profileError) {
-        console.log('Error en perfil:', profileError);
+      // Cargar estadísticas desde el servidor
+      const statsResponse = await api.get('/user/stats');
+      if (statsResponse.data.success) {
+        setStats(statsResponse.data.data);
       }
-
-      // Cargar estadísticas
-      try {
-        const statsData = await makeAPICall('/user/stats');
-        if (statsData?.success) {
-          setStats(statsData.data);
-        }
-      } catch (statsError) {
-        console.log('Error en stats:', statsError);
-      }
-
-    } catch (error: any) {
-      console.error('Error cargando datos:', error);
-      
-      if (error.message.includes('401')) {
-        console.log('Token inválido, limpiando sesión...');
-        await clearSession();
-        router.replace('/(auth)/login');
-      }
+    } catch (error) {
+      console.log('Error cargando datos del usuario:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const clearSession = async () => {
+  const loadTodayRoutes = async () => {
     try {
-      await AsyncStorage.multiRemove([
-        'authToken',
-        'userEmail', 
-        'userName'
-      ]);
-      console.log('Sesión limpiada');
+      const today = new Date().getDay(); // 0 = domingo, 1 = lunes, etc.
+      const response = await api.get(`/routes/day/${today}`);
+      
+      if (response.data.success) {
+        setTodayRoutes(response.data.data.routes || []);
+      }
     } catch (error) {
-      console.error('Error limpiando sesión:', error);
+      console.log('Error cargando rutas de hoy:', error);
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Intentar hacer logout en el servidor
-              await makeAPICall('/auth/logout', 'POST').catch(() => {
-                console.log('Logout del servidor falló, pero continuando...');
-              });
-              
-              // Limpiar datos locales
-              await clearSession();
-              
-              // Redirigir al login
-              router.replace('/(auth)/login');
-            } catch (error) {
-              console.error('Error al cerrar sesión:', error);
-              // Aunque falle, limpiar sesión local
-              await clearSession();
-              router.replace('/(auth)/login');
-            }
-          }
-        }
-      ]
-    );
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return '🌅 Buenos días';
+    if (hour < 18) return '☀️ Buenas tardes';
+    return '🌙 Buenas noches';
   };
 
-  const handleGoToLogin = () => {
-    router.replace('/(auth)/login');
+  const getMotivationalMessage = () => {
+    const messages = [
+      "¡Hoy es un buen día para nuevas rutas! 🚀",
+      "Cada kilómetro cuenta hacia tu objetivo 💪",
+      "La aventura te espera en cada ruta 🗺️",
+      "¡Mantén el rumbo y sigue adelante! ⭐",
+      "Cada ruta es una nueva oportunidad 🌟"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  };
+
+  const formatTime = (time: string) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const getCurrentDate = () => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    };
+    return currentTime.toLocaleDateString('es-ES', options);
+  };
+
+  const getDayName = () => {
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return days[currentTime.getDay()];
+  };
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'create_route':
+        router.push('/(tabs)/map');
+        break;
+      case 'view_routes':
+        router.push('/(tabs)/routes');
+        break;
+      case 'view_profile':
+        router.push('/(tabs)/profile');
+        break;
+      default:
+        Alert.alert('Próximamente', 'Esta función estará disponible pronto');
+    }
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando...</Text>
-      </View>
-    );
-  }
-
-  // Si no hay usuario autenticado
-  if (!user) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.notAuthenticatedContainer}>
-          <Ionicons name="person-circle-outline" size={80} color="#bdc3c7" />
-          <Text style={styles.notAuthenticatedTitle}>No hay sesión activa</Text>
-          <Text style={styles.notAuthenticatedText}>
-            Por favor inicia sesión para ver tu perfil
-          </Text>
-          
-          <TouchableOpacity 
-            style={styles.loginButton}
-            onPress={handleGoToLogin}
-          >
-            <Ionicons name="log-in" size={20} color="white" />
-            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
-          </TouchableOpacity>
-        </View>
+        <Ionicons name="refresh" size={40} color="#3498db" />
+        <Text style={styles.loadingText}>Cargando tu día...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header del Perfil */}
-      <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {user.full_name?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
-          <Text style={styles.userName}>{user.full_name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header con saludo personalizado */}
+      <View style={styles.headerContainer}>
+        <View style={styles.greetingSection}>
+          <Text style={styles.greetingText}>{getGreeting()}</Text>
+          <Text style={styles.userNameText}>{userName}!</Text>
+          <Text style={styles.dateText}>{getCurrentDate()}</Text>
+          <Text style={styles.motivationalText}>{getMotivationalMessage()}</Text>
+        </View>
+
+        <View style={styles.weatherWidget}>
+          <Text style={styles.dayName}>{getDayName()}</Text>
+          <Text style={styles.currentTime}>
+            {currentTime.toLocaleTimeString('es-ES', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}
+          </Text>
         </View>
       </View>
 
-      {/* Estadísticas */}
+      {/* Estadísticas rápidas */}
       {stats && (
         <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Estadísticas</Text>
+          <Text style={styles.sectionTitle}>📊 Resumen</Text>
           <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Ionicons name="map" size={24} color="#3498db" />
+            <View style={styles.statCard}>
+              <Ionicons name="map" size={28} color="#3498db" />
               <Text style={styles.statNumber}>{stats.total_routes}</Text>
-              <Text style={styles.statLabel}>Rutas</Text>
+              <Text style={styles.statLabel}>Rutas Total</Text>
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="checkmark-circle" size={24} color="#27ae60" />
+            <View style={styles.statCard}>
+              <Ionicons name="checkmark-circle" size={28} color="#27ae60" />
               <Text style={styles.statNumber}>{stats.completed_executions}</Text>
               <Text style={styles.statLabel}>Completadas</Text>
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="navigate" size={24} color="#e74c3c" />
+            <View style={styles.statCard}>
+              <Ionicons name="speedometer" size={28} color="#e74c3c" />
               <Text style={styles.statNumber}>{stats.total_distance_km.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Km Total</Text>
+              <Text style={styles.statLabel}>Km Recorridos</Text>
             </View>
           </View>
         </View>
       )}
 
-      {/* Información del Perfil */}
-      <View style={styles.infoSection}>
-        <Text style={styles.sectionTitle}>Información Personal</Text>
+      {/* Rutas de hoy */}
+      <View style={styles.todaySection}>
+        <Text style={styles.sectionTitle}>🗓️ Rutas de Hoy ({getDayName()})</Text>
         
-        <View style={styles.infoItem}>
-          <Ionicons name="person" size={20} color="#666" />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Nombre Completo</Text>
-            <Text style={styles.infoValue}>{user.full_name}</Text>
+        {todayRoutes.length > 0 ? (
+          <View style={styles.routesList}>
+            {todayRoutes.map((route) => (
+              <View key={route.id} style={styles.routeCard}>
+                <View style={styles.routeHeader}>
+                  <Ionicons name="navigate-circle" size={24} color="#3498db" />
+                  <View style={styles.routeInfo}>
+                    <Text style={styles.routeName}>{route.name}</Text>
+                    <Text style={styles.routeTime}>
+                      {route.start_time ? formatTime(route.start_time) : 'Sin hora definida'}
+                    </Text>
+                  </View>
+                  <Text style={styles.waypointCount}>
+                    {route.waypoints.length} paradas
+                  </Text>
+                </View>
+              </View>
+            ))}
           </View>
-        </View>
-
-        <View style={styles.infoItem}>
-          <Ionicons name="mail" size={20} color="#666" />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{user.email}</Text>
-          </View>
-        </View>
-
-        {user.phone && (
-          <View style={styles.infoItem}>
-            <Ionicons name="call" size={20} color="#666" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Teléfono</Text>
-              <Text style={styles.infoValue}>{user.phone}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.infoItem}>
-          <Ionicons name="shield-checkmark" size={20} color="#666" />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Estado de Email</Text>
-            <Text style={[
-              styles.infoValue,
-              { color: user.email_verified ? '#27ae60' : '#f39c12' }
-            ]}>
-              {user.email_verified ? 'Verificado' : 'Pendiente'}
-            </Text>
-          </View>
-        </View>
-
-        {user.last_login && (
-          <View style={styles.infoItem}>
-            <Ionicons name="time" size={20} color="#666" />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Último Acceso</Text>
-              <Text style={styles.infoValue}>
-                {new Date(user.last_login).toLocaleString()}
-              </Text>
-            </View>
+        ) : (
+          <View style={styles.noRoutesCard}>
+            <Ionicons name="calendar-outline" size={48} color="#bdc3c7" />
+            <Text style={styles.noRoutesText}>No tienes rutas programadas para hoy</Text>
+            <Text style={styles.noRoutesSubtext}>¡Es un buen momento para crear una nueva ruta!</Text>
           </View>
         )}
+      </View>
 
-        <View style={styles.infoItem}>
-          <Ionicons name="calendar" size={20} color="#666" />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Miembro Desde</Text>
-            <Text style={styles.infoValue}>
-              {new Date(user.created_at).toLocaleDateString()}
+      {/* Acciones rápidas */}
+      <View style={styles.quickActionsSection}>
+        <Text style={styles.sectionTitle}>⚡ Acciones Rápidas</Text>
+        <View style={styles.actionsGrid}>
+          <TouchableOpacity 
+            style={[styles.actionCard, { backgroundColor: '#3498db' }]}
+            onPress={() => handleQuickAction('create_route')}
+          >
+            <Ionicons name="add-circle" size={32} color="white" />
+            <Text style={styles.actionText}>Crear Ruta</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionCard, { backgroundColor: '#27ae60' }]}
+            onPress={() => handleQuickAction('view_routes')}
+          >
+            <Ionicons name="list" size={32} color="white" />
+            <Text style={styles.actionText}>Ver Rutas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionCard, { backgroundColor: '#f39c12' }]}
+            onPress={() => handleQuickAction('view_profile')}
+          >
+            <Ionicons name="person" size={32} color="white" />
+            <Text style={styles.actionText}>Mi Perfil</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionCard, { backgroundColor: '#9b59b6' }]}
+            onPress={() => Alert.alert('Próximamente', 'Estadísticas detalladas')}
+          >
+            <Ionicons name="analytics" size={32} color="white" />
+            <Text style={styles.actionText}>Estadísticas</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Consejos del día */}
+      <View style={styles.tipsSection}>
+        <Text style={styles.sectionTitle}>💡 Consejo del Día</Text>
+        <View style={styles.tipCard}>
+          <Ionicons name="bulb" size={24} color="#f39c12" />
+          <View style={styles.tipContent}>
+            <Text style={styles.tipText}>
+              Planifica tus rutas la noche anterior para optimizar tu tiempo y combustible.
             </Text>
           </View>
         </View>
       </View>
 
-      {/* Acciones */}
-      <View style={styles.actionsSection}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.logoutButton]} 
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out" size={20} color="#e74c3c" />
-          <Text style={[styles.actionButtonText, { color: '#e74c3c' }]}>
-            Cerrar Sesión
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Espacio inferior */}
+      <View style={styles.bottomSpacing} />
     </ScrollView>
   );
 }
@@ -316,88 +286,80 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     fontSize: 16,
     color: '#666',
+    marginTop: 10,
   },
-  notAuthenticatedContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-  notAuthenticatedTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  notAuthenticatedText: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  loginButton: {
+  headerContainer: {
     backgroundColor: '#3498db',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
-  loginButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 10,
+  greetingSection: {
+    marginBottom: 20,
   },
-  header: {
-    backgroundColor: '#3498db',
-    paddingVertical: 30,
-    alignItems: 'center',
+  greetingText: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: 5,
   },
-  avatarContainer: {
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#2980b9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatarText: {
-    fontSize: 32,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  userName: {
-    fontSize: 24,
+  userNameText: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: 'white',
     marginBottom: 5,
   },
-  userEmail: {
+  dateText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 10,
+    textTransform: 'capitalize',
+  },
+  motivationalText: {
     fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
+    fontStyle: 'italic',
+  },
+  weatherWidget: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: 15,
+    borderRadius: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dayName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  currentTime: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
   },
   statsContainer: {
+    margin: 20,
     backgroundColor: 'white',
-    margin: 15,
+    borderRadius: 15,
     padding: 20,
-    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
@@ -407,70 +369,139 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
   },
-  statItem: {
+  statCard: {
     alignItems: 'center',
+    flex: 1,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2c3e50',
-    marginTop: 5,
+    marginTop: 8,
   },
   statLabel: {
     fontSize: 12,
     color: '#7f8c8d',
-    marginTop: 2,
+    textAlign: 'center',
+    marginTop: 4,
   },
-  infoSection: {
+  todaySection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  routesList: {
+    gap: 10,
+  },
+  routeCard: {
     backgroundColor: 'white',
-    margin: 15,
-    marginTop: 0,
-    padding: 20,
-    borderRadius: 10,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
-  },
-  infoContent: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#7f8c8d',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#2c3e50',
-    marginTop: 2,
-  },
-  actionsSection: {
-    margin: 15,
-    marginTop: 0,
-  },
-  actionButton: {
-    backgroundColor: 'white',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 12,
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  actionButtonText: {
+  routeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  routeInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  routeName: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#2c3e50',
-    marginLeft: 15,
+  },
+  routeTime: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginTop: 2,
+  },
+  waypointCount: {
+    fontSize: 12,
+    color: '#3498db',
     fontWeight: '500',
   },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: '#e74c3c',
-    backgroundColor: '#fff5f5',
+  noRoutesCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  noRoutesText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginTop: 15,
+    textAlign: 'center',
+  },
+  noRoutesSubtext: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  quickActionsSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  actionCard: {
+    width: (width - 50) / 2,
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+  },
+  actionText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  tipsSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  tipCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tipContent: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#2c3e50',
+    lineHeight: 20,
+  },
+  bottomSpacing: {
+    height: 20,
   },
 });
