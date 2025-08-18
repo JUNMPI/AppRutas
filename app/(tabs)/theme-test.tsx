@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import {
     ScrollView,
@@ -12,31 +11,6 @@ import { useTheme } from '../../hooks/useTheme';
 
 export default function ThemeTestScreen() {
   const { theme, currentColorScheme, colors, changeTheme } = useTheme();
-
-  const handleClearStorage = async () => {
-    try {
-      // Eliminar la preferencia de tema
-      await AsyncStorage.removeItem('@app_theme_preference');
-      await AsyncStorage.removeItem('user_theme_preference');
-      console.log('Theme storage cleared - reload the app');
-    } catch (error) {
-      console.error('Error clearing theme storage:', error);
-    }
-  };
-
-  const handleDebugStorage = async () => {
-    try {
-      const keys = await AsyncStorage.getAllKeys();
-      console.log('All AsyncStorage keys:', keys);
-      
-      for (const key of keys) {
-        const value = await AsyncStorage.getItem(key);
-        console.log(`${key}:`, value);
-      }
-    } catch (error) {
-      console.error('Error debugging AsyncStorage:', error);
-    }
-  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -95,26 +69,6 @@ export default function ThemeTestScreen() {
             Componente ThemeToggle:
           </Text>
           <ThemeToggle showLabel={true} size="large" />
-        </View>
-
-        <View style={styles.buttonSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Debug:
-          </Text>
-          
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.warning }]}
-            onPress={handleDebugStorage}
-          >
-            <Text style={styles.buttonText}>Ver AsyncStorage</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.danger }]}
-            onPress={handleClearStorage}
-          >
-            <Text style={styles.buttonText}>Limpiar Storage</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={[styles.colorPalette, { borderColor: colors.border }]}>

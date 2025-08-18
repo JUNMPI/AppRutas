@@ -74,7 +74,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="theme-test"
         options={{
-          title: 'Test Tema',
+          title: 'Tema',
           headerTitle: 'Prueba de Tema',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="color-palette" size={size || 24} color={color} />

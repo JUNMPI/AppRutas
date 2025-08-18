@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ThemeToggle } from '../../components/ThemeToggle';
 import { useTheme } from '../../hooks/useTheme';
 
 interface UserProfile {
@@ -199,11 +198,6 @@ export default function ProfileScreen() {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header del Perfil */}
       <View style={[styles.header, { backgroundColor: colors.headerBackground }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerTopSpacer} />
-          <ThemeToggle size="medium" />
-        </View>
-        
         <View style={styles.avatarContainer}>
           <View style={[styles.avatar, { backgroundColor: colors.tint }]}>
             <Text style={styles.avatarText}>
@@ -366,17 +360,6 @@ const styles = StyleSheet.create({
   header: {
     paddingVertical: 30,
     alignItems: 'center',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  headerTopSpacer: {
-    flex: 1,
   },
   avatarContainer: {
     alignItems: 'center',
