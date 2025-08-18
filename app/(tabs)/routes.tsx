@@ -58,8 +58,8 @@ export default function RoutesScreen() {
       if (response.data.success) {
         setRoutes(response.data.data.routes);
       }
-    } catch (error) {
-      console.error('Error cargando rutas:', error);
+    } catch {
+      console.error('Error cargando rutas');
       Alert.alert('Error', 'No se pudieron cargar las rutas');
     } finally {
       setLoading(false);
@@ -86,7 +86,7 @@ export default function RoutesScreen() {
               await api.delete(`/routes/${routeId}`);
               setRoutes(routes.filter(route => route.id !== routeId));
               Alert.alert('Éxito', 'Ruta eliminada correctamente');
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'No se pudo eliminar la ruta');
             }
           }
@@ -106,7 +106,7 @@ export default function RoutesScreen() {
           ? { ...route, is_active: !currentStatus }
           : route
       ));
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo actualizar el estado de la ruta');
     }
   };
@@ -121,7 +121,7 @@ export default function RoutesScreen() {
         Alert.alert('Éxito', 'Ruta duplicada correctamente');
         loadRoutes(); // Recargar la lista
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo duplicar la ruta');
     }
   };

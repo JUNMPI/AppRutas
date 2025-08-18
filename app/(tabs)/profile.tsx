@@ -102,9 +102,9 @@ export default function ProfileScreen() {
       }
 
     } catch (error: any) {
-      console.error('Error cargando datos:', error);
+      console.error('Error cargando datos:', error?.message || error);
       
-      if (error.message.includes('401')) {
+      if (error?.message?.includes('401')) {
         console.log('Token inválido, limpiando sesión...');
         await clearSession();
         router.replace('/(auth)/login');
@@ -148,8 +148,8 @@ export default function ProfileScreen() {
               
               // Redirigir al login
               router.replace('/(auth)/login');
-            } catch (error) {
-              console.error('Error al cerrar sesión:', error);
+            } catch (error: any) {
+              console.error('Error eliminando sesión:', error);
               // Aunque falle, limpiar sesión local
               await clearSession();
               router.replace('/(auth)/login');
