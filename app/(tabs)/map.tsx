@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
+import api from '../../services/api';
 
 // Importación condicional de MapView
 let MapView: any = View;
@@ -26,7 +27,6 @@ if (Platform.OS !== 'web') {
     Marker = Maps.Marker;
     Polyline = Maps.Polyline;
   } catch {
-    // Si react-native-maps no está disponible, usar componentes fallback
     console.log('react-native-maps no está disponible');
   }
 }
@@ -37,6 +37,7 @@ interface Waypoint {
   latitude: number;
   longitude: number;
   order_index: number;
+  waypoint_type?: 'start' | 'stop' | 'end';
 }
 
 export default function MapScreen() {
@@ -53,7 +54,10 @@ export default function MapScreen() {
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [waypointName, setWaypointName] = useState('');
   const [routeName, setRouteName] = useState('');
+  const [routeDescription, setRouteDescription] = useState('');
   const [selectedDay, setSelectedDay] = useState(1); // Lunes por defecto
+  const [startTime, setStartTime] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -93,12 +97,19 @@ export default function MapScreen() {
       return;
     }
 
+    // Determinar el tipo de waypoint
+    let waypointType: 'start' | 'stop' | 'end' = 'stop';
+    if (waypoints.length === 0) {
+      waypointType = 'start';
+    }
+
     const newWaypoint: Waypoint = {
       id: Date.now().toString(),
       name: waypointName.trim(),
       latitude: selectedLocation.latitude,
       longitude: selectedLocation.longitude,
       order_index: waypoints.length,
+      waypoint_type: waypointType,
     };
 
     setWaypoints([...waypoints, newWaypoint]);
@@ -110,7 +121,11 @@ export default function MapScreen() {
   const removeWaypoint = (id: string) => {
     const updatedWaypoints = waypoints
       .filter(point => point.id !== id)
-      .map((point, index) => ({ ...point, order_index: index }));
+      .map((point, index) => ({ 
+        ...point, 
+        order_index: index,
+        waypoint_type: index === 0 ? 'start' : 'stop'
+      }));
     setWaypoints(updatedWaypoints);
   };
 
@@ -125,28 +140,84 @@ export default function MapScreen() {
       return;
     }
 
+    setIsSaving(true);
+
     try {
-      Alert.alert(
-        'Éxito',
-        `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setRouteName('');
-              setWaypoints([]);
+      // Actualizar el último waypoint como 'end'
+      const waypointsToSave = waypoints.map((wp, index) => ({
+        ...wp,
+        waypoint_type: index === 0 ? 'start' : index === waypoints.length - 1 ? 'end' : 'stop'
+      }));
+
+      const routeData = {
+        name: routeName.trim(),
+        description: routeDescription.trim() || null,
+        day_of_week: selectedDay,
+        start_time: startTime || null,
+        waypoints: waypointsToSave.map(wp => ({
+          name: wp.name,
+          latitude: wp.latitude,
+          longitude: wp.longitude,
+          order_index: wp.order_index,
+          waypoint_type: wp.waypoint_type,
+          estimated_duration: 0,
+        }))
+      };
+
+      console.log('Enviando ruta al servidor:', routeData);
+
+      const response = await api.post('/routes', routeData);
+
+      if (response.data.success) {
+        Alert.alert(
+          '¡Éxito!',
+          `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Limpiar el formulario
+                setRouteName('');
+                setRouteDescription('');
+                setWaypoints([]);
+                setStartTime('');
+                setSelectedDay(1);
+              }
             }
-          }
-        ]
+          ]
+        );
+      } else {
+        throw new Error(response.data.error || 'Error al guardar la ruta');
+      }
+    } catch (error: any) {
+      console.error('Error guardando ruta:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.error || error.message || 'No se pudo guardar la ruta'
       );
-    } catch {
-      Alert.alert('Error', 'No se pudo guardar la ruta');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const clearRoute = () => {
-    setWaypoints([]);
-    setRouteName('');
+    Alert.alert(
+      'Limpiar Ruta',
+      '¿Estás seguro de que quieres limpiar todos los puntos?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Limpiar',
+          style: 'destructive',
+          onPress: () => {
+            setWaypoints([]);
+            setRouteName('');
+            setRouteDescription('');
+            setStartTime('');
+          }
+        }
+      ]
+    );
   };
 
   const dynamicStyles = StyleSheet.create({
@@ -185,7 +256,7 @@ export default function MapScreen() {
       top: 50,
       left: 20,
       right: 20,
-      backgroundColor: colors.cardBackground + 'E6', // Semi-transparent
+      backgroundColor: colors.cardBackground + 'E6',
       padding: 10,
       borderRadius: 10,
       shadowColor: colors.shadow,
@@ -392,6 +463,7 @@ export default function MapScreen() {
           <TouchableOpacity 
             style={[styles.controlButton, { backgroundColor: colors.danger }]} 
             onPress={clearRoute}
+            disabled={waypoints.length === 0}
           >
             <Ionicons name="trash" size={20} color="white" />
             <Text style={styles.controlButtonText}>Limpiar</Text>
@@ -399,11 +471,17 @@ export default function MapScreen() {
           
           {waypoints.length >= 2 && (
             <TouchableOpacity 
-              style={[styles.controlButton, { backgroundColor: colors.success }]} 
+              style={[
+                styles.controlButton, 
+                { backgroundColor: isSaving ? colors.textSecondary : colors.success }
+              ]} 
               onPress={saveRoute}
+              disabled={isSaving}
             >
               <Ionicons name="save" size={20} color="white" />
-              <Text style={styles.controlButtonText}>Guardar Ruta</Text>
+              <Text style={styles.controlButtonText}>
+                {isSaving ? 'Guardando...' : 'Guardar Ruta'}
+              </Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -440,7 +518,9 @@ export default function MapScreen() {
       >
         <View style={dynamicStyles.modalContainer}>
           <View style={dynamicStyles.modalContent}>
-            <Text style={dynamicStyles.modalTitle}>Agregar Punto</Text>
+            <Text style={dynamicStyles.modalTitle}>
+              {waypoints.length === 0 ? 'Configurar Ruta y Primer Punto' : 'Agregar Punto'}
+            </Text>
             
             <TextInput
               style={dynamicStyles.input}
@@ -459,6 +539,25 @@ export default function MapScreen() {
                   placeholderTextColor={colors.textSecondary}
                   value={routeName}
                   onChangeText={setRouteName}
+                />
+
+                <Text style={dynamicStyles.label}>Descripción (opcional):</Text>
+                <TextInput
+                  style={dynamicStyles.input}
+                  placeholder="Ej: Ruta de reparto zona centro"
+                  placeholderTextColor={colors.textSecondary}
+                  value={routeDescription}
+                  onChangeText={setRouteDescription}
+                  multiline
+                />
+
+                <Text style={dynamicStyles.label}>Hora de inicio (opcional):</Text>
+                <TextInput
+                  style={dynamicStyles.input}
+                  placeholder="Ej: 08:00"
+                  placeholderTextColor={colors.textSecondary}
+                  value={startTime}
+                  onChangeText={setStartTime}
                 />
 
                 <Text style={dynamicStyles.label}>Día de la semana:</Text>
