@@ -69,6 +69,20 @@ export default function TabLayout() {
           ),
         }}
       />
+      
+      {/* Pantalla temporal para probar temas - ELIMINAR EN PRODUCCIÓN */}
+      <Tabs.Screen
+        name="theme-test"
+        options={{
+          title: 'Test Tema',
+          headerTitle: 'Prueba de Tema',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="color-palette" size={size || 24} color={color} />
+          ),
+          // Descomenta la siguiente línea para ocultar esta pestaña en producción:
+          // href: null,
+        }}
+      />
     </Tabs>
   );
 }
