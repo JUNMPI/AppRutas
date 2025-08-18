@@ -2,9 +2,9 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import 'react-native-reanimated';
-import { useTheme } from '../hooks/useTheme';
+import { ThemeProvider, useTheme } from '../hooks/useTheme';
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const { currentColorScheme, colors, isLoading } = useTheme();
 
   // Si el tema está cargando, mostrar una pantalla de carga
@@ -28,5 +28,13 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style={currentColorScheme === 'dark' ? 'light' : 'dark'} />
     </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   );
 }

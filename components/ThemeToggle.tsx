@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import {
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
@@ -16,16 +16,31 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ showLabel = false, size = 'medium', style }: ThemeToggleProps) {
-  const { colors, toggleTheme, getThemeIcon, getThemeLabel } = useTheme();
-  const [showModal, setShowModal] = React.useState(false);
+  const { colors, theme, changeTheme, getThemeIcon, getThemeLabel } = useTheme();
+  const [showModal, setShowModal] = useState(false);
 
   const iconSize = size === 'small' ? 20 : size === 'large' ? 32 : 24;
+
+  const handlePress = () => {
+    setShowModal(true);
+  };
+
+  const handleThemeSelect = async (selectedTheme: 'light' | 'dark' | 'system') => {
+    await changeTheme(selectedTheme);
+    setShowModal(false);
+  };
+
+  const themeOptions = [
+    { key: 'light' as const, label: 'Tema Claro', icon: 'sunny' as const, description: 'Fondo claro y texto oscuro' },
+    { key: 'dark' as const, label: 'Tema Oscuro', icon: 'moon' as const, description: 'Fondo oscuro y texto claro' },
+    { key: 'system' as const, label: 'Seguir Sistema', icon: 'phone-portrait' as const, description: 'Usa la configuración del dispositivo' },
+  ];
 
   return (
     <>
       <TouchableOpacity
         style={[styles.toggleButton, { backgroundColor: colors.cardBackground }, style]}
-        onPress={() => setShowModal(true)}
+        onPress={handlePress}
         activeOpacity={0.7}
       >
         <Ionicons 
@@ -40,98 +55,78 @@ export function ThemeToggle({ showLabel = false, size = 'medium', style }: Theme
         )}
       </TouchableOpacity>
 
-      <ThemeModal 
+      <Modal
         visible={showModal}
-        onClose={() => setShowModal(false)}
-      />
-    </>
-  );
-}
-
-interface ThemeModalProps {
-  visible: boolean;
-  onClose: () => void;
-}
-
-function ThemeModal({ visible, onClose }: ThemeModalProps) {
-  const { theme, colors, changeTheme } = useTheme();
-
-  const themeOptions = [
-    { key: 'light', label: 'Tema Claro', icon: 'sunny', description: 'Fondo claro y texto oscuro' },
-    { key: 'dark', label: 'Tema Oscuro', icon: 'moon', description: 'Fondo oscuro y texto claro' },
-    { key: 'system', label: 'Seguir Sistema', icon: 'phone-portrait', description: 'Usa la configuración del dispositivo' },
-  ] as const;
-
-  const handleThemeSelect = (selectedTheme: typeof theme) => {
-    changeTheme(selectedTheme);
-    onClose();
-  };
-
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={onClose}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowModal(false)}
       >
-        <View style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>
-            Seleccionar Tema
-          </Text>
-
-          {themeOptions.map((option) => (
-            <TouchableOpacity
-              key={option.key}
-              style={[
-                styles.themeOption,
-                theme === option.key && { 
-                  backgroundColor: colors.tint + '15',
-                  borderColor: colors.tint 
-                }
-              ]}
-              onPress={() => handleThemeSelect(option.key)}
-            >
-              <View style={styles.themeOptionLeft}>
-                <Ionicons 
-                  name={option.icon as any} 
-                  size={24} 
-                  color={theme === option.key ? colors.tint : colors.textSecondary} 
-                />
-                <View style={styles.themeOptionText}>
-                  <Text style={[
-                    styles.themeOptionLabel, 
-                    { color: theme === option.key ? colors.tint : colors.text }
-                  ]}>
-                    {option.label}
-                  </Text>
-                  <Text style={[styles.themeOptionDescription, { color: colors.textSecondary }]}>
-                    {option.description}
-                  </Text>
-                </View>
-              </View>
-              
-              {theme === option.key && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.tint} />
-              )}
-            </TouchableOpacity>
-          ))}
-
-          <TouchableOpacity
-            style={[styles.cancelButton, { borderColor: colors.border }]}
-            onPress={onClose}
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowModal(false)}
+        >
+          <TouchableOpacity 
+            style={[styles.modalContent, { backgroundColor: colors.cardBackground }]}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
           >
-            <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
-              Cancelar
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Seleccionar Tema
             </Text>
+
+            {themeOptions.map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[
+                  styles.themeOption,
+                  { backgroundColor: colors.background, borderColor: colors.border },
+                  theme === option.key && { 
+                    backgroundColor: colors.tint + '15',
+                    borderColor: colors.tint 
+                  }
+                ]}
+                onPress={() => handleThemeSelect(option.key)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.themeOptionLeft}>
+                  <Ionicons 
+                    name={option.icon as any} 
+                    size={24} 
+                    color={theme === option.key ? colors.tint : colors.textSecondary} 
+                  />
+                  <View style={styles.themeOptionText}>
+                    <Text style={[
+                      styles.themeOptionLabel, 
+                      { color: theme === option.key ? colors.tint : colors.text }
+                    ]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[styles.themeOptionDescription, { color: colors.textSecondary }]}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </View>
+                
+                {theme === option.key && (
+                  <Ionicons name="checkmark-circle" size={20} color={colors.tint} />
+                )}
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.cancelButton, { borderColor: colors.border }]}
+              onPress={() => setShowModal(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+                Cancelar
+              </Text>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 }
 
@@ -186,7 +181,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
   themeOptionLeft: {
     flexDirection: 'row',
