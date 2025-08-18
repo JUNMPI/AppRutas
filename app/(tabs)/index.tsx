@@ -64,8 +64,8 @@ export default function HomeScreen() {
       if (statsResponse.data.success) {
         setStats(statsResponse.data.data);
       }
-    } catch (error) {
-      console.log('Error cargando datos del usuario:', error);
+    } catch {
+      console.log('Error cargando datos del usuario');
     } finally {
       setLoading(false);
     }
@@ -79,8 +79,8 @@ export default function HomeScreen() {
       if (response.data.success) {
         setTodayRoutes(response.data.data.routes || []);
       }
-    } catch (error) {
-      console.log('Error cargando rutas de hoy:', error);
+    } catch {
+      console.log('Error cargando rutas de hoy');
     }
   };
 
