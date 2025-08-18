@@ -20,10 +20,15 @@ let Marker: any = View;
 let Polyline: any = View;
 
 if (Platform.OS !== 'web') {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-  Polyline = Maps.Polyline;
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default || Maps.MapView;
+    Marker = Maps.Marker;
+    Polyline = Maps.Polyline;
+  } catch {
+    // Si react-native-maps no está disponible, usar componentes fallback
+    console.log('react-native-maps no está disponible');
+  }
 }
 
 interface Waypoint {
@@ -54,13 +59,13 @@ export default function MapScreen() {
 
   const getCurrentLocation = useCallback(async () => {
     try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permiso denegado', 'Necesitamos acceso a la ubicación para mostrar el mapa');
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
+      const location = await Location.getCurrentPositionAsync({});
       setRegion({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
@@ -134,7 +139,7 @@ export default function MapScreen() {
           }
         ]
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo guardar la ruta');
     }
   };
