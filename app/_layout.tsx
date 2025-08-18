@@ -1,13 +1,14 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import React from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 import { ThemeProvider, useTheme } from '../hooks/useTheme';
 
-function RootLayoutContent() {
+// Componente interno que usa el tema
+function RootLayoutNav() {
   const { currentColorScheme, colors, isLoading } = useTheme();
 
-  // Si el tema está cargando, mostrar una pantalla de carga
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }} />
@@ -31,10 +32,11 @@ function RootLayoutContent() {
   );
 }
 
+// Componente principal que envuelve todo con ThemeProvider
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <RootLayoutContent />
+      <RootLayoutNav />
     </ThemeProvider>
   );
 }
