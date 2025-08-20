@@ -118,24 +118,31 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
     let paramIndex = 2;
 
     if (day_of_week !== undefined) {
-      whereConditions.push(`day_of_week = ${paramIndex}`);
+      whereConditions.push(`day_of_week = $${paramIndex}`);
       queryParams.push(Number(day_of_week));
       paramIndex++;
     }
 
     if (is_active !== undefined) {
-      whereConditions.push(`is_active = ${paramIndex}`);
+      whereConditions.push(`is_active = $${paramIndex}`);
       queryParams.push(Boolean(is_active));
       paramIndex++;
     }
 
     if (search) {
-      whereConditions.push(`(name ILIKE ${paramIndex} OR description ILIKE ${paramIndex})`);
+      whereConditions.push(`(name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`);
       queryParams.push(`%${search}%`);
       paramIndex++;
     }
 
     const whereClause = whereConditions.join(' AND ');
+
+    // Validar sort y order para evitar SQL injection
+    const validSortFields = ['created_at', 'updated_at', 'name', 'day_of_week'];
+    const validOrders = ['ASC', 'DESC'];
+    
+    const safeSortField = validSortFields.includes(sort) ? sort : 'created_at';
+    const safeOrder = validOrders.includes(order) ? order : 'DESC';
 
     // Query principal con waypoints
     const routesQuery = `
@@ -162,8 +169,8 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
       LEFT JOIN route_waypoints rw ON r.id = rw.route_id
       WHERE ${whereClause}
       GROUP BY r.id
-      ORDER BY r.${sort} ${order}
-      LIMIT ${paramIndex} OFFSET ${paramIndex + 1}
+      ORDER BY r.${safeSortField} ${safeOrder}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
     queryParams.push(Number(limit), offset);
@@ -175,9 +182,12 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
       WHERE ${whereClause}
     `;
 
+    // Solo usar los parámetros del WHERE para el count (sin limit y offset)
+    const countParams = queryParams.slice(0, -2);
+
     const [routesResult, countResult] = await Promise.all([
       pool.query(routesQuery, queryParams),
-      pool.query(countQuery, queryParams.slice(0, -2)) // Remover limit y offset
+      pool.query(countQuery, countParams)
     ]);
 
     const routes = routesResult.rows;
@@ -204,7 +214,8 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
     console.error('Error obteniendo rutas:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al obtener las rutas'
+      error: 'Error al obtener las rutas',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
