@@ -85,12 +85,13 @@ export const createRoute = async (req: Request, res: Response): Promise<void> =>
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error creando ruta:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al crear la ruta'
+      error: 'Error al crear la ruta',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   } finally {
     client.release();
@@ -113,24 +114,24 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
     const offset = (Number(page) - 1) * Number(limit);
 
     // Construir query dinámicamente
-    let whereConditions = ['user_id = $1', 'deleted_at IS NULL'];
+    let whereConditions = ['r.user_id = $1', 'r.deleted_at IS NULL'];
     let queryParams: any[] = [userId];
     let paramIndex = 2;
 
     if (day_of_week !== undefined) {
-      whereConditions.push(`day_of_week = $${paramIndex}`);
+      whereConditions.push(`r.day_of_week = $${paramIndex}`);
       queryParams.push(Number(day_of_week));
       paramIndex++;
     }
 
     if (is_active !== undefined) {
-      whereConditions.push(`is_active = $${paramIndex}`);
+      whereConditions.push(`r.is_active = $${paramIndex}`);
       queryParams.push(Boolean(is_active));
       paramIndex++;
     }
 
     if (search) {
-      whereConditions.push(`(name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`);
+      whereConditions.push(`(r.name ILIKE $${paramIndex} OR r.description ILIKE $${paramIndex})`);
       queryParams.push(`%${search}%`);
       paramIndex++;
     }
@@ -185,6 +186,9 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
     // Solo usar los parámetros del WHERE para el count (sin limit y offset)
     const countParams = queryParams.slice(0, -2);
 
+    console.log('Query SQL:', routesQuery);
+    console.log('Params:', queryParams);
+
     const [routesResult, countResult] = await Promise.all([
       pool.query(routesQuery, queryParams),
       pool.query(countQuery, countParams)
@@ -210,12 +214,12 @@ export const getUserRoutes = async (req: Request, res: Response): Promise<void> 
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error obteniendo rutas:', error);
     res.status(500).json({
       success: false,
       error: 'Error al obtener las rutas',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 };
@@ -266,11 +270,12 @@ export const getRouteById = async (req: Request, res: Response): Promise<void> =
       data: result.rows[0]
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error obteniendo ruta:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al obtener la ruta'
+      error: 'Error al obtener la ruta',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 };
@@ -313,27 +318,27 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
     let paramIndex = 1;
 
     if (name !== undefined) {
-      updateFields.push(`name = ${paramIndex}`);
+      updateFields.push(`name = $${paramIndex}`);
       updateValues.push(name);
       paramIndex++;
     }
     if (description !== undefined) {
-      updateFields.push(`description = ${paramIndex}`);
+      updateFields.push(`description = $${paramIndex}`);
       updateValues.push(description);
       paramIndex++;
     }
     if (day_of_week !== undefined) {
-      updateFields.push(`day_of_week = ${paramIndex}`);
+      updateFields.push(`day_of_week = $${paramIndex}`);
       updateValues.push(day_of_week);
       paramIndex++;
     }
     if (start_time !== undefined) {
-      updateFields.push(`start_time = ${paramIndex}`);
+      updateFields.push(`start_time = $${paramIndex}`);
       updateValues.push(start_time);
       paramIndex++;
     }
     if (is_active !== undefined) {
-      updateFields.push(`is_active = ${paramIndex}`);
+      updateFields.push(`is_active = $${paramIndex}`);
       updateValues.push(is_active);
       paramIndex++;
     }
@@ -345,7 +350,7 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
       const updateQuery = `
         UPDATE routes 
         SET ${updateFields.join(', ')}
-        WHERE id = ${paramIndex}
+        WHERE id = $${paramIndex}
         RETURNING *
       `;
 
@@ -417,12 +422,13 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
       data: updatedRoute.rows[0]
     });
 
-  } catch (error) {
+  } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error actualizando ruta:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al actualizar la ruta'
+      error: 'Error al actualizar la ruta',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   } finally {
     client.release();
@@ -458,11 +464,12 @@ export const deleteRoute = async (req: Request, res: Response): Promise<void> =>
       message: 'Ruta eliminada exitosamente'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error eliminando ruta:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al eliminar la ruta'
+      error: 'Error al eliminar la ruta',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 };
@@ -519,11 +526,12 @@ export const getRoutesByDay = async (req: Request, res: Response): Promise<void>
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error obteniendo rutas por día:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al obtener las rutas del día'
+      error: 'Error al obtener las rutas del día',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 };
@@ -609,12 +617,13 @@ export const duplicateRoute = async (req: Request, res: Response): Promise<void>
       data: newRoute
     });
 
-  } catch (error) {
+  } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error duplicando ruta:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al duplicar la ruta'
+      error: 'Error al duplicar la ruta',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   } finally {
     client.release();
