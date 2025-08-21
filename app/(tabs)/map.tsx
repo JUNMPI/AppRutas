@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -42,6 +43,11 @@ interface Waypoint {
 
 export default function MapScreen() {
   const { colors } = useTheme();
+  const params = useLocalSearchParams();
+  const isEditMode = params.editMode === 'true';
+  const editRouteId = params.routeId as string;
+  const editRouteData = params.routeData ? JSON.parse(params.routeData as string) : null;
+
   const [region, setRegion] = useState({
     latitude: -6.7775,
     longitude: -79.8451,
@@ -55,11 +61,48 @@ export default function MapScreen() {
   const [waypointName, setWaypointName] = useState('');
   const [routeName, setRouteName] = useState('');
   const [routeDescription, setRouteDescription] = useState('');
-  const [selectedDay, setSelectedDay] = useState(1); // Lunes por defecto
+  const [selectedDay, setSelectedDay] = useState(1);
   const [startTime, setStartTime] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+  // Cargar datos de la ruta si estamos en modo edición
+  useEffect(() => {
+    if (isEditMode && editRouteData) {
+      setRouteName(editRouteData.name);
+      setRouteDescription(editRouteData.description || '');
+      setSelectedDay(editRouteData.day_of_week);
+      setStartTime(editRouteData.start_time || '');
+      
+      // Cargar waypoints con el formato correcto
+      if (editRouteData.waypoints && editRouteData.waypoints.length > 0) {
+        const sortedWaypoints = editRouteData.waypoints.sort((a: any, b: any) => a.order_index - b.order_index);
+        const formattedWaypoints: Waypoint[] = sortedWaypoints.map((wp: any) => ({
+          id: wp.id || (Date.now().toString() + Math.random().toString()),
+          name: wp.name,
+          latitude: typeof wp.latitude === 'string' ? parseFloat(wp.latitude) : wp.latitude,
+          longitude: typeof wp.longitude === 'string' ? parseFloat(wp.longitude) : wp.longitude,
+          order_index: wp.order_index,
+          waypoint_type: wp.waypoint_type as 'start' | 'stop' | 'end' | undefined
+        }));
+        setWaypoints(formattedWaypoints);
+        
+        // Centrar el mapa en el primer waypoint
+        if (formattedWaypoints.length > 0) {
+          setRegion({
+            latitude: formattedWaypoints[0].latitude,
+            longitude: formattedWaypoints[0].longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          });
+        }
+      }
+      
+      setIsEditing(true);
+    }
+  }, [isEditMode, editRouteData]);
 
   const getCurrentLocation = useCallback(async () => {
     try {
@@ -82,8 +125,10 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    getCurrentLocation();
-  }, [getCurrentLocation]);
+    if (!isEditMode) {
+      getCurrentLocation();
+    }
+  }, [getCurrentLocation, isEditMode]);
 
   const handleMapPress = (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
@@ -97,7 +142,6 @@ export default function MapScreen() {
       return;
     }
 
-    // Determinar el tipo de waypoint
     let waypointType: 'start' | 'stop' | 'end' = 'stop';
     if (waypoints.length === 0) {
       waypointType = 'start';
@@ -124,7 +168,7 @@ export default function MapScreen() {
       .map((point, index) => ({ 
         ...point, 
         order_index: index,
-        waypoint_type: index === 0 ? 'start' : 'stop'
+        waypoint_type: index === 0 ? 'start' : 'stop' as 'start' | 'stop' | 'end'
       }));
     setWaypoints(updatedWaypoints);
   };
@@ -143,7 +187,6 @@ export default function MapScreen() {
     setIsSaving(true);
 
     try {
-      // Actualizar el último waypoint como 'end'
       const waypointsToSave = waypoints.map((wp, index) => ({
         ...wp,
         waypoint_type: index === 0 ? 'start' : index === waypoints.length - 1 ? 'end' : 'stop'
@@ -164,24 +207,33 @@ export default function MapScreen() {
         }))
       };
 
-      console.log('Enviando ruta al servidor:', routeData);
-
-      const response = await api.post('/routes', routeData);
+      let response;
+      if (isEditing && editRouteId) {
+        console.log('Actualizando ruta:', editRouteId);
+        response = await api.put(`/routes/${editRouteId}`, routeData);
+      } else {
+        console.log('Creando nueva ruta');
+        response = await api.post('/routes', routeData);
+      }
 
       if (response.data.success) {
         Alert.alert(
           '¡Éxito!',
-          `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]}`,
+          isEditing ? 'Ruta actualizada correctamente' : `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]}`,
           [
             {
               text: 'OK',
               onPress: () => {
-                // Limpiar el formulario
                 setRouteName('');
                 setRouteDescription('');
                 setWaypoints([]);
                 setStartTime('');
                 setSelectedDay(1);
+                setIsEditing(false);
+                
+                if (isEditing) {
+                  router.back();
+                }
               }
             }
           ]
@@ -211,9 +263,11 @@ export default function MapScreen() {
           style: 'destructive',
           onPress: () => {
             setWaypoints([]);
-            setRouteName('');
-            setRouteDescription('');
-            setStartTime('');
+            if (!isEditing) {
+              setRouteName('');
+              setRouteDescription('');
+              setStartTime('');
+            }
           }
         }
       ]
@@ -395,7 +449,6 @@ export default function MapScreen() {
     },
   });
 
-  // Si estamos en web, mostramos un mensaje alternativo
   if (Platform.OS === 'web') {
     return (
       <View style={dynamicStyles.webContainer}>
@@ -448,13 +501,23 @@ export default function MapScreen() {
       {/* Panel de información */}
       <View style={dynamicStyles.infoPanel}>
         <Text style={dynamicStyles.infoText}>
-          Puntos: {waypoints.length} | Toca el mapa para agregar puntos
+          {isEditing ? '✏️ Editando ruta' : 'Puntos'}: {waypoints.length} | Toca el mapa para {isEditing ? 'modificar' : 'agregar'} puntos
         </Text>
       </View>
 
       {/* Controles */}
       <View style={styles.controls}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {isEditing && (
+            <TouchableOpacity 
+              style={[styles.controlButton, { backgroundColor: colors.textSecondary }]} 
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={20} color="white" />
+              <Text style={styles.controlButtonText}>Volver</Text>
+            </TouchableOpacity>
+          )}
+          
           <TouchableOpacity style={[styles.controlButton, { backgroundColor: colors.tint }]} onPress={getCurrentLocation}>
             <Ionicons name="location" size={20} color="white" />
             <Text style={styles.controlButtonText}>Mi Ubicación</Text>
@@ -480,7 +543,7 @@ export default function MapScreen() {
             >
               <Ionicons name="save" size={20} color="white" />
               <Text style={styles.controlButtonText}>
-                {isSaving ? 'Guardando...' : 'Guardar Ruta'}
+                {isSaving ? 'Guardando...' : isEditing ? 'Actualizar Ruta' : 'Guardar Ruta'}
               </Text>
             </TouchableOpacity>
           )}
@@ -519,7 +582,7 @@ export default function MapScreen() {
         <View style={dynamicStyles.modalContainer}>
           <View style={dynamicStyles.modalContent}>
             <Text style={dynamicStyles.modalTitle}>
-              {waypoints.length === 0 ? 'Configurar Ruta y Primer Punto' : 'Agregar Punto'}
+              {waypoints.length === 0 && !isEditing ? 'Configurar Ruta y Primer Punto' : 'Agregar Punto'}
             </Text>
             
             <TextInput
@@ -530,7 +593,7 @@ export default function MapScreen() {
               onChangeText={setWaypointName}
             />
 
-            {waypoints.length === 0 && (
+            {waypoints.length === 0 && !isEditing && (
               <>
                 <Text style={dynamicStyles.label}>Nombre de la ruta:</Text>
                 <TextInput
