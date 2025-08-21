@@ -52,24 +52,27 @@ export default function HomeScreen() {
   }, []);
 
   const loadUserData = async () => {
-    try {
-      // Cargar nombre del usuario del almacenamiento local
-      const storedName = await AsyncStorage.getItem('userName');
-      if (storedName) {
-        setUserName(storedName);
-      }
-
-      // Cargar estadísticas desde el servidor
-      const statsResponse = await api.get('/user/stats');
-      if (statsResponse.data.success) {
-        setStats(statsResponse.data.data);
-      }
-    } catch {
-      console.log('Error cargando datos del usuario');
-    } finally {
-      setLoading(false);
+  try {
+    // Cargar nombre del usuario del almacenamiento local
+    const storedName = await AsyncStorage.getItem('userName');
+    if (storedName) {
+      setUserName(storedName);
     }
-  };
+
+    // Cargar estadísticas desde el servidor
+    const statsResponse = await api.get('/user/stats');
+    console.log('Respuesta de estadísticas:', statsResponse.data); // Para debug
+    
+    if (statsResponse.data.success) {
+      setStats(statsResponse.data.data);
+      console.log('Estadísticas cargadas:', statsResponse.data.data); // Para debug
+    }
+  } catch (error) {
+    console.log('Error cargando datos del usuario:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadTodayRoutes = async () => {
     try {

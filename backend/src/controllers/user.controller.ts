@@ -200,60 +200,59 @@ export const getUserStats = async (req: Request, res: Response): Promise<void> =
   try {
     const userId = req.user!.id;
 
-    // Obtener estadísticas reales de las rutas
-    const [routesCount, activeRoutesCount, distanceResult] = await Promise.all([
-      // Total de rutas
+    // Obtener todas las estadísticas necesarias
+    const [routesResult, executionsResult, distanceResult, routesByDayResult] = await Promise.all([
+      // Total de rutas del usuario
       pool.query(
-        'SELECT COUNT(*) as count FROM routes WHERE user_id = $1 AND deleted_at IS NULL',
+        'SELECT COUNT(*) as total FROM routes WHERE user_id = $1 AND deleted_at IS NULL',
         [userId]
       ),
-      // Rutas activas (usaremos esto como "completadas" por ahora)
+      // Total de ejecuciones completadas (por ahora usamos rutas activas como proxy)
       pool.query(
-        'SELECT COUNT(*) as count FROM routes WHERE user_id = $1 AND is_active = true AND deleted_at IS NULL',
+        `SELECT COUNT(*) as total 
+         FROM routes 
+         WHERE user_id = $1 
+         AND is_active = true 
+         AND deleted_at IS NULL`,
         [userId]
       ),
-      // Distancia total
+      // Suma total de kilómetros de TODAS las rutas (no solo activas)
       pool.query(
         `SELECT COALESCE(SUM(total_distance), 0) as total
          FROM routes 
-         WHERE user_id = $1 AND deleted_at IS NULL`,
+         WHERE user_id = $1 
+         AND deleted_at IS NULL`,
+        [userId]
+      ),
+      // Rutas agrupadas por día
+      pool.query(
+        `SELECT day_of_week, COUNT(*) as count 
+         FROM routes 
+         WHERE user_id = $1 AND deleted_at IS NULL 
+         GROUP BY day_of_week 
+         ORDER BY day_of_week`,
         [userId]
       )
     ]);
 
-    // Obtener rutas por día
-    const routesByDay = await pool.query(
-      `SELECT day_of_week, COUNT(*) as count 
-       FROM routes 
-       WHERE user_id = $1 AND deleted_at IS NULL 
-       GROUP BY day_of_week 
-       ORDER BY day_of_week`,
-      [userId]
-    );
-
     const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     
-    interface UserStats {
-      total_routes: number;
-      completed_executions: number;
-      total_distance_km: number;
-      routes_by_day: Record<string, number>;
-    }
-
-    const stats: UserStats = {
-      total_routes: parseInt(routesCount.rows[0].count),
-      completed_executions: parseInt(activeRoutesCount.rows[0].count), // Usando rutas activas como proxy
-      total_distance_km: parseFloat(distanceResult.rows[0].total) || 0,
-      routes_by_day: {}
-    };
-    
-    // Mapear rutas por día
-    routesByDay.rows.forEach((row: any) => {
+    const routes_by_day: Record<string, number> = {};
+    routesByDayResult.rows.forEach((row: any) => {
       const dayName = dayNames[row.day_of_week];
       if (dayName) {
-        stats.routes_by_day[dayName] = parseInt(row.count);
+        routes_by_day[dayName] = parseInt(row.count);
       }
     });
+
+    const stats = {
+      total_routes: parseInt(routesResult.rows[0].total),
+      completed_executions: parseInt(executionsResult.rows[0].total), // Por ahora es el mismo que rutas activas
+      total_distance_km: parseFloat(distanceResult.rows[0].total) || 0,
+      routes_by_day
+    };
+
+    console.log('Estadísticas del usuario:', stats); // Para debug
 
     res.json({
       success: true,

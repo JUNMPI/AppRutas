@@ -110,6 +110,7 @@ export default function MapScreen() {
     }
   }, [isEditMode, editRouteData]); // 🔧 Ahora editRouteData es estable
 
+  
   const getCurrentLocation = useCallback(async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -179,84 +180,117 @@ export default function MapScreen() {
     setWaypoints(updatedWaypoints);
   };
 
-  const saveRoute = async () => {
-    if (!routeName.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre para la ruta');
-      return;
+
+ // AGREGAR esta función DESPUÉS de la línea 162 (después de removeWaypoint) y ANTES de saveRoute
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+// REEMPLAZAR tu función saveRoute actual (línea 164-234) con esta versión modificada:
+
+const saveRoute = async () => {
+  if (!routeName.trim()) {
+    Alert.alert('Error', 'Por favor ingresa un nombre para la ruta');
+    return;
+  }
+
+  if (waypoints.length < 2) {
+    Alert.alert('Error', 'La ruta debe tener al menos 2 puntos');
+    return;
+  }
+
+  setIsSaving(true);
+
+  try {
+    // NUEVO: Calcular distancia total de la ruta
+    let totalDistance = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      totalDistance += calculateDistance(
+        waypoints[i].latitude,
+        waypoints[i].longitude,
+        waypoints[i + 1].latitude,
+        waypoints[i + 1].longitude
+      );
+    }
+    
+    console.log('Distancia total calculada:', totalDistance, 'km'); // Para debug
+
+    const waypointsToSave = waypoints.map((wp, index) => ({
+      ...wp,
+      waypoint_type: index === 0 ? 'start' : index === waypoints.length - 1 ? 'end' : 'stop'
+    }));
+
+    const routeData = {
+      name: routeName.trim(),
+      description: routeDescription.trim() || null,
+      day_of_week: selectedDay,
+      start_time: startTime || null,
+      total_distance: Math.round(totalDistance * 100) / 100, // NUEVO: Agregar distancia total redondeada
+      waypoints: waypointsToSave.map(wp => ({
+        name: wp.name,
+        latitude: wp.latitude,
+        longitude: wp.longitude,
+        order_index: wp.order_index,
+        waypoint_type: wp.waypoint_type,
+        estimated_duration: 0,
+      }))
+    };
+
+    console.log('Datos de ruta a enviar:', routeData); // Para debug
+
+    let response;
+    if (isEditing && editRouteId) {
+      console.log('Actualizando ruta:', editRouteId);
+      response = await api.put(`/routes/${editRouteId}`, routeData);
+    } else {
+      console.log('Creando nueva ruta con distancia:', routeData.total_distance, 'km');
+      response = await api.post('/routes', routeData);
     }
 
-    if (waypoints.length < 2) {
-      Alert.alert('Error', 'La ruta debe tener al menos 2 puntos');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const waypointsToSave = waypoints.map((wp, index) => ({
-        ...wp,
-        waypoint_type: index === 0 ? 'start' : index === waypoints.length - 1 ? 'end' : 'stop'
-      }));
-
-      const routeData = {
-        name: routeName.trim(),
-        description: routeDescription.trim() || null,
-        day_of_week: selectedDay,
-        start_time: startTime || null,
-        waypoints: waypointsToSave.map(wp => ({
-          name: wp.name,
-          latitude: wp.latitude,
-          longitude: wp.longitude,
-          order_index: wp.order_index,
-          waypoint_type: wp.waypoint_type,
-          estimated_duration: 0,
-        }))
-      };
-
-      let response;
-      if (isEditing && editRouteId) {
-        console.log('Actualizando ruta:', editRouteId);
-        response = await api.put(`/routes/${editRouteId}`, routeData);
-      } else {
-        console.log('Creando nueva ruta');
-        response = await api.post('/routes', routeData);
-      }
-
-      if (response.data.success) {
-        Alert.alert(
-          '¡Éxito!',
-          isEditing ? 'Ruta actualizada correctamente' : `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setRouteName('');
-                setRouteDescription('');
-                setWaypoints([]);
-                setStartTime('');
-                setSelectedDay(1);
-                setIsEditing(false);
-                
-                if (isEditing) {
-                  router.back();
-                }
+    if (response.data.success) {
+      Alert.alert(
+        '¡Éxito!',
+        isEditing ? 'Ruta actualizada correctamente' : `Ruta "${routeName}" guardada para el ${dayNames[selectedDay]} (${totalDistance.toFixed(1)} km)`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setRouteName('');
+              setRouteDescription('');
+              setWaypoints([]);
+              setStartTime('');
+              setSelectedDay(1);
+              setIsEditing(false);
+              
+              if (isEditing) {
+                router.back();
               }
             }
-          ]
-        );
-      } else {
-        throw new Error(response.data.error || 'Error al guardar la ruta');
-      }
-    } catch (error: any) {
-      console.error('Error guardando ruta:', error);
-      Alert.alert(
-        'Error',
-        error.response?.data?.error || error.message || 'No se pudo guardar la ruta'
+          }
+        ]
       );
-    } finally {
-      setIsSaving(false);
+    } else {
+      throw new Error(response.data.error || 'Error al guardar la ruta');
     }
-  };
+  } catch (error: any) {
+    console.error('Error guardando ruta:', error);
+    Alert.alert(
+      'Error',
+      error.response?.data?.error || error.message || 'No se pudo guardar la ruta'
+    );
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const clearRoute = () => {
     Alert.alert(

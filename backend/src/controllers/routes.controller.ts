@@ -13,39 +13,48 @@ export const createRoute = async (req: Request, res: Response): Promise<void> =>
       description,
       day_of_week,
       start_time,
-      waypoints
-    }: CreateRouteRequest = req.body;
+      waypoints,
+      total_distance // NUEVO: Recibir distancia del frontend si existe
+    }: CreateRouteRequest & { total_distance?: number } = req.body;
 
     await client.query('BEGIN');
 
-    // Calcular distancia total estimada (simplificado)
-    let totalDistance = 0;
-    for (let i = 0; i < waypoints.length - 1; i++) {
-      const lat1 = waypoints[i].latitude;
-      const lon1 = waypoints[i].longitude;
-      const lat2 = waypoints[i + 1].latitude;
-      const lon2 = waypoints[i + 1].longitude;
-      
-      // Fórmula de Haversine simplificada
-      const R = 6371; // Radio de la Tierra en km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      totalDistance += R * c;
+    // Calcular distancia total (usar la del frontend si existe, sino calcular)
+    let finalDistance = total_distance || 0;
+    
+    // Si no viene distancia del frontend, calcularla
+    if (!total_distance && waypoints && waypoints.length > 1) {
+      console.log('Calculando distancia en el backend...');
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const lat1 = waypoints[i].latitude;
+        const lon1 = waypoints[i].longitude;
+        const lat2 = waypoints[i + 1].latitude;
+        const lon2 = waypoints[i + 1].longitude;
+        
+        // Fórmula de Haversine
+        const R = 6371; // Radio de la Tierra en km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        finalDistance += R * c;
+      }
     }
 
-    // Crear la ruta
+    console.log('Distancia total a guardar:', finalDistance, 'km'); // Debug
+
+    // Crear la ruta con is_active = true por defecto
     const routeResult = await client.query(
-      `INSERT INTO routes (user_id, name, description, day_of_week, start_time, total_distance)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO routes (user_id, name, description, day_of_week, start_time, total_distance, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [userId, name, description, day_of_week, start_time, Math.round(totalDistance * 100) / 100]
+      [userId, name, description, day_of_week, start_time, Math.round(finalDistance * 100) / 100, true]
     );
 
     const route = routeResult.rows[0];
+    console.log('Ruta guardada con distancia:', route.total_distance); // Debug
 
     // Crear los waypoints
     const waypointPromises = waypoints.map((waypoint, index) =>
@@ -292,7 +301,8 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
       day_of_week,
       start_time,
       is_active,
-      waypoints
+      waypoints,
+      total_distance // NUEVO: Recibir distancia del frontend si existe
     } = req.body;
 
     await client.query('BEGIN');
@@ -340,6 +350,43 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
     if (is_active !== undefined) {
       updateFields.push(`is_active = $${paramIndex}`);
       updateValues.push(is_active);
+      paramIndex++;
+    }
+
+    // NUEVO: Si vienen waypoints o distancia, actualizar la distancia
+    if (waypoints && waypoints.length > 1) {
+      let calculatedDistance = 0;
+      
+      // Si viene distancia del frontend, usarla; sino, calcular
+      if (total_distance) {
+        calculatedDistance = total_distance;
+      } else {
+        // Calcular distancia con los nuevos waypoints
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const lat1 = waypoints[i].latitude;
+          const lon1 = waypoints[i].longitude;
+          const lat2 = waypoints[i + 1].latitude;
+          const lon2 = waypoints[i + 1].longitude;
+          
+          const R = 6371;
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          calculatedDistance += R * c;
+        }
+      }
+      
+      console.log('Actualizando distancia a:', calculatedDistance, 'km'); // Debug
+      updateFields.push(`total_distance = $${paramIndex}`);
+      updateValues.push(Math.round(calculatedDistance * 100) / 100);
+      paramIndex++;
+    } else if (total_distance !== undefined) {
+      // Si solo viene la distancia sin waypoints
+      updateFields.push(`total_distance = $${paramIndex}`);
+      updateValues.push(Math.round(total_distance * 100) / 100);
       paramIndex++;
     }
 
