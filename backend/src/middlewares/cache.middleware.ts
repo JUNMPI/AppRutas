@@ -1,6 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
 import redis from '../config/redis';
 
+// DESARROLLO: Cache desactivado temporalmente para evitar problemas con estadísticas
+const CACHE_ENABLED = false; // Cambiar a true para producción
+
 interface CacheOptions {
   ttl?: number; // Time to live in seconds
   keyPrefix?: string;
@@ -15,6 +18,12 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
   } = options;
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // BYPASS CACHE EN DESARROLLO
+    if (!CACHE_ENABLED) {
+      next();
+      return;
+    }
+
     // Solo cachear GET requests
     if (req.method !== 'GET') {
       next();
@@ -75,6 +84,11 @@ export const createCacheMiddleware = (options: CacheOptions = {}) => {
 // Middleware para invalidar cache específico
 export const invalidateCache = (pattern: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!CACHE_ENABLED) {
+      next();
+      return;
+    }
+    
     try {
       const userId = req.user?.id;
       if (userId) {
@@ -111,6 +125,8 @@ export const cacheRouteStats = createCacheMiddleware({
 // Utilidades para invalidación manual
 export class CacheManager {
   static async invalidateUserCache(userId: string): Promise<void> {
+    if (!CACHE_ENABLED) return;
+    
     try {
       const keys = await redis.keys(`*${userId}*`);
       if (keys.length > 0) {
@@ -123,6 +139,8 @@ export class CacheManager {
   }
 
   static async invalidateRouteCache(userId: string, routeId?: string): Promise<void> {
+    if (!CACHE_ENABLED) return;
+    
     try {
       const pattern = routeId 
         ? `*${userId}*routes*${routeId}*`

@@ -83,6 +83,7 @@ export const createRoute = async (req: Request, res: Response): Promise<void> =>
     await client.query('COMMIT');
 
     // Invalidar cache de rutas del usuario
+    await CacheManager.invalidateUserCache(userId); // Esto invalida TODO el cache del usuario
     await CacheManager.invalidateRouteCache(userId);
 
     res.status(201).json({
@@ -433,6 +434,7 @@ export const updateRoute = async (req: Request, res: Response): Promise<void> =>
     await client.query('COMMIT');
 
     // Invalidar cache
+    await CacheManager.invalidateUserCache(userId); // Esto invalida TODO el cache del usuario
     await CacheManager.invalidateRouteCache(userId, id);
 
     // Obtener la ruta actualizada
@@ -656,6 +658,7 @@ export const duplicateRoute = async (req: Request, res: Response): Promise<void>
     await client.query('COMMIT');
 
     // Invalidar cache
+    await CacheManager.invalidateUserCache(userId); // Esto invalida TODO el cache del usuario
     await CacheManager.invalidateRouteCache(userId);
 
     res.status(201).json({

@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,18 +33,16 @@ interface TodayRoute {
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const { colors } = useTheme(); // Agregar hook de tema
+  const { colors } = useTheme();
   const [userName, setUserName] = useState<string>('Usuario');
   const [stats, setStats] = useState<UserStats | null>(null);
   const [todayRoutes, setTodayRoutes] = useState<TodayRoute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Actualizar hora cada minuto
   useEffect(() => {
-    loadUserData();
-    loadTodayRoutes();
-    
-    // Actualizar hora cada minuto
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
@@ -51,40 +50,75 @@ export default function HomeScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const loadUserData = async () => {
-  try {
-    // Cargar nombre del usuario del almacenamiento local
-    const storedName = await AsyncStorage.getItem('userName');
-    if (storedName) {
-      setUserName(storedName);
-    }
+  // Cargar datos inicial
+  useEffect(() => {
+    loadAllData();
+  }, []);
 
-    // Cargar estadísticas desde el servidor
-    const statsResponse = await api.get('/user/stats');
-    console.log('Respuesta de estadísticas:', statsResponse.data); // Para debug
-    
-    if (statsResponse.data.success) {
-      setStats(statsResponse.data.data);
-      console.log('Estadísticas cargadas:', statsResponse.data.data); // Para debug
-    }
-  } catch (error) {
-    console.log('Error cargando datos del usuario:', error);
-  } finally {
+  // Recargar datos cuando la pantalla obtiene el foco
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 Pantalla de inicio obtuvo el foco, recargando datos...');
+      loadAllData();
+    }, [])
+  );
+
+  const loadAllData = async () => {
+    console.log('📱 Cargando todos los datos de inicio...');
+    await Promise.all([
+      loadUserData(),
+      loadTodayRoutes()
+    ]);
     setLoading(false);
-  }
-};
+  };
+
+  const loadUserData = async () => {
+    try {
+      // Cargar nombre del usuario del almacenamiento local
+      const storedName = await AsyncStorage.getItem('userName');
+      if (storedName) {
+        setUserName(storedName);
+      }
+
+      // Cargar estadísticas desde el servidor
+      const statsResponse = await api.get('/user/stats');
+      console.log('📊 Estadísticas recibidas:', statsResponse.data);
+      
+      if (statsResponse.data.success) {
+        setStats(statsResponse.data.data);
+        console.log('✅ Estadísticas actualizadas:', {
+          total: statsResponse.data.data.total_routes,
+          activas: statsResponse.data.data.completed_executions,
+          km: statsResponse.data.data.total_distance_km
+        });
+      }
+    } catch (error) {
+      console.log('❌ Error cargando datos del usuario:', error);
+    }
+  };
 
   const loadTodayRoutes = async () => {
     try {
       const today = new Date().getDay(); // 0 = domingo, 1 = lunes, etc.
+      console.log(`📅 Cargando rutas del día ${today}`);
+      
       const response = await api.get(`/routes/day/${today}`);
       
       if (response.data.success) {
         setTodayRoutes(response.data.data.routes || []);
+        console.log(`✅ ${response.data.data.routes?.length || 0} rutas para hoy`);
       }
-    } catch {
-      console.log('Error cargando rutas de hoy');
+    } catch (error) {
+      console.log('❌ Error cargando rutas de hoy:', error);
+      setTodayRoutes([]);
     }
+  };
+
+  const onRefresh = async () => {
+    console.log('♻️ Refrescando manualmente...');
+    setRefreshing(true);
+    await loadAllData();
+    setRefreshing(false);
   };
 
   const getGreeting = () => {
@@ -102,7 +136,9 @@ export default function HomeScreen() {
       "¡Mantén el rumbo y sigue adelante! ⭐",
       "Cada ruta es una nueva oportunidad 🌟"
     ];
-    return messages[Math.floor(Math.random() * messages.length)];
+    // Usar el día actual como seed para que el mensaje sea consistente durante el día
+    const today = new Date().getDate();
+    return messages[today % messages.length];
   };
 
   const formatTime = (time: string) => {
@@ -155,7 +191,18 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.tint]}
+          tintColor={colors.tint}
+        />
+      }
+    >
       {/* Header con saludo personalizado */}
       <View style={[styles.headerContainer, { backgroundColor: colors.headerBackground }]}>
         {/* Agregar botón de tema en la esquina */}
