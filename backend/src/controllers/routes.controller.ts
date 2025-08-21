@@ -617,6 +617,7 @@ export const duplicateRoute = async (req: Request, res: Response): Promise<void>
       data: newRoute
     });
 
+    
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error duplicando ruta:', error);

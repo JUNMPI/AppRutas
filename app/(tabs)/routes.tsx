@@ -127,10 +127,25 @@ export default function RoutesScreen() {
   };
 
   const formatDistance = (distance?: number) => {
-    if (!distance) return 'N/A';
-    return distance < 1 
-      ? `${Math.round(distance * 1000)}m`
-      : `${distance.toFixed(1)}km`;
+    // Verificación más estricta para evitar crashes
+    if (distance === undefined || distance === null || isNaN(distance)) {
+      return 'N/A';
+    }
+    
+    // Convertir a número si viene como string
+    const numDistance = Number(distance);
+    
+    if (isNaN(numDistance)) {
+      return 'N/A';
+    }
+    
+    if (numDistance === 0) {
+      return '0 km';
+    }
+    
+    return numDistance < 1 
+      ? `${Math.round(numDistance * 1000)}m`
+      : `${numDistance.toFixed(1)}km`;
   };
 
   const renderRoute = ({ item }: { item: Route }) => (
@@ -167,7 +182,7 @@ export default function RoutesScreen() {
           </Text>
         </View>
         
-        {item.total_distance && (
+        {item.total_distance !== undefined && item.total_distance !== null && (
           <View style={styles.detailItem}>
             <Ionicons name="map" size={16} color={colors.textSecondary} />
             <Text style={[styles.detailText, { color: colors.textSecondary }]}>
