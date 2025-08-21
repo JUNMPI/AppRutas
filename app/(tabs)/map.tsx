@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -44,9 +44,15 @@ interface Waypoint {
 export default function MapScreen() {
   const { colors } = useTheme();
   const params = useLocalSearchParams();
-  const isEditMode = params.editMode === 'true';
-  const editRouteId = params.routeId as string;
-  const editRouteData = params.routeData ? JSON.parse(params.routeData as string) : null;
+  
+  // 🔧 ÚNICO CAMBIO: Usar useMemo para estabilizar estos valores
+  const { isEditMode, editRouteId, editRouteData } = useMemo(() => {
+    return {
+      isEditMode: params.editMode === 'true',
+      editRouteId: params.routeId as string,
+      editRouteData: params.routeData ? JSON.parse(params.routeData as string) : null
+    };
+  }, [params.editMode, params.routeId, params.routeData]);
 
   const [region, setRegion] = useState({
     latitude: -6.7775,
@@ -102,7 +108,7 @@ export default function MapScreen() {
       
       setIsEditing(true);
     }
-  }, [isEditMode, editRouteData]);
+  }, [isEditMode, editRouteData]); // 🔧 Ahora editRouteData es estable
 
   const getCurrentLocation = useCallback(async () => {
     try {
