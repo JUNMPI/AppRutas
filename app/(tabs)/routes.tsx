@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router'; // ← AGREGAR ESTA LÍNEA
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import api from '../../services/api';
+
 
 interface Route {
   id: string;
@@ -215,11 +217,21 @@ export default function RoutesScreen() {
       <View style={styles.routeActions}>
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton, { backgroundColor: colors.background }]}
-          onPress={() => Alert.alert('Info', 'Función de edición pendiente')}
-        >
-          <Ionicons name="pencil" size={16} color={colors.tint} />
-          <Text style={[styles.actionButtonText, { color: colors.tint }]}>Editar</Text>
-        </TouchableOpacity>
+          onPress={() => {
+          // Navegar a la pantalla de mapa con los datos de la ruta
+            router.push({
+            pathname: '/(tabs)/map',
+            params: { 
+              editMode: 'true',
+              routeId: item.id,
+              routeData: JSON.stringify(item)
+            }
+          });
+        }}
+>
+  <Ionicons name="pencil" size={16} color={colors.tint} />
+  <Text style={[styles.actionButtonText, { color: colors.tint }]}>Editar</Text>
+</TouchableOpacity>
         
         <TouchableOpacity
           style={[styles.actionButton, styles.duplicateButton, { backgroundColor: colors.background }]}

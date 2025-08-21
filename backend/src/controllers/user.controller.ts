@@ -200,27 +200,39 @@ export const getUserStats = async (req: Request, res: Response): Promise<void> =
   try {
     const userId = req.user!.id;
 
-    const [routesCount, executionsCount, totalDistance] = await Promise.all([
-      // Contar rutas activas
+    // Obtener estadísticas reales de las rutas
+    const [routesCount, activeRoutesCount, distanceResult] = await Promise.all([
+      // Total de rutas
+      pool.query(
+        'SELECT COUNT(*) as count FROM routes WHERE user_id = $1 AND deleted_at IS NULL',
+        [userId]
+      ),
+      // Rutas activas (usaremos esto como "completadas" por ahora)
       pool.query(
         'SELECT COUNT(*) as count FROM routes WHERE user_id = $1 AND is_active = true AND deleted_at IS NULL',
         [userId]
       ),
-      // Contar ejecuciones completadas
+      // Distancia total
       pool.query(
-        'SELECT COUNT(*) as count FROM route_executions WHERE user_id = $1 AND status = $2',
-        [userId, 'completed']
-      ),
-      // Sumar distancia total de rutas completadas
-      pool.query(
-        `SELECT COALESCE(SUM(total_distance), 0) as total 
-         FROM route_executions 
-         WHERE user_id = $1 AND status = $2 AND total_distance IS NOT NULL`,
-        [userId, 'completed']
+        `SELECT COALESCE(SUM(total_distance), 0) as total
+         FROM routes 
+         WHERE user_id = $1 AND deleted_at IS NULL`,
+        [userId]
       )
     ]);
 
-    // Definir el tipo correcto para stats
+    // Obtener rutas por día
+    const routesByDay = await pool.query(
+      `SELECT day_of_week, COUNT(*) as count 
+       FROM routes 
+       WHERE user_id = $1 AND deleted_at IS NULL 
+       GROUP BY day_of_week 
+       ORDER BY day_of_week`,
+      [userId]
+    );
+
+    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    
     interface UserStats {
       total_routes: number;
       completed_executions: number;
@@ -230,24 +242,12 @@ export const getUserStats = async (req: Request, res: Response): Promise<void> =
 
     const stats: UserStats = {
       total_routes: parseInt(routesCount.rows[0].count),
-      completed_executions: parseInt(executionsCount.rows[0].count),
-      total_distance_km: parseFloat(totalDistance.rows[0].total),
+      completed_executions: parseInt(activeRoutesCount.rows[0].count), // Usando rutas activas como proxy
+      total_distance_km: parseFloat(distanceResult.rows[0].total) || 0,
       routes_by_day: {}
     };
-
-    // Obtener rutas por día de la semana
-    const routesByDay = await pool.query(
-      `SELECT day_of_week, COUNT(*) as count 
-       FROM routes 
-       WHERE user_id = $1 AND is_active = true AND deleted_at IS NULL 
-       GROUP BY day_of_week 
-       ORDER BY day_of_week`,
-      [userId]
-    );
-
-    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     
-    // Corregir el error de tipos aquí
+    // Mapear rutas por día
     routesByDay.rows.forEach((row: any) => {
       const dayName = dayNames[row.day_of_week];
       if (dayName) {
