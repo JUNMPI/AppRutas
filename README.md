@@ -616,10 +616,9 @@ npx expo install @react-native-async-storage/async-storage
 
 ## 📞 Contacto y Soporte
 
-- **Email**: contacto@apprutas.com
-- **GitHub Issues**: [https://github.com/tu-usuario/AppRutas/issues](https://github.com/tu-usuario/AppRutas/issues)
-- **LinkedIn**: [Tu Perfil](https://linkedin.com/in/tu-perfil)
-- **Portfolio**: [tu-portfolio.com](https://tu-portfolio.com)
+- **Email**: junioralvines1005@gmail.com
+- **LinkedIn**: [Perfil](https://linkedin.com/in/tu-perfil)
+- **Portfolio**: [portfolio.com](https://tu-portfolio.com)
 
 ## 🙏 Agradecimientos
 
