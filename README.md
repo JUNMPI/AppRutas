@@ -617,8 +617,8 @@ npx expo install @react-native-async-storage/async-storage
 ## 📞 Contacto y Soporte
 
 - **Email**: junioralvines1005@gmail.com
-- **LinkedIn**: [Perfil](https://linkedin.com/in/tu-perfil)
-- **Portfolio**: [portfolio.com](https://tu-portfolio.com)
+- **LinkedIn**: [JuniorAlvinesPerfil](https://linkedin.com/in/tu-perfil)
+- **Portfolio**: [JuniorAlvines.pe](https://tu-portfolio.com)
 
 ## 🙏 Agradecimientos
 
@@ -627,7 +627,6 @@ npx expo install @react-native-async-storage/async-storage
 - **PostgreSQL** por la base de datos robusta y confiable
 - **Stack Overflow** por las soluciones a problemas complejos
 - **Anthropic Claude** por la asistencia en el desarrollo
-- Todos los **beta testers** que probaron la aplicación
 
 ---
 
