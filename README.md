@@ -610,7 +610,7 @@ npx expo install @react-native-async-storage/async-storage
 
 ## 👥 Equipo de Desarrollo
 
-- **Desarrollador Principal** - [Tu Nombre]
+- **Desarrollador Principal** - Junior Alvines
 - **Stack**: React Native, Node.js, PostgreSQL
 - **Ubicación**: Chiclayo, Perú 🇵🇪
 
