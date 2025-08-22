@@ -79,8 +79,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="color-palette" size={size || 24} color={color} />
           ),
-          // Descomenta la siguiente línea para ocultar esta pestaña en producción:
+          // Descomenta la siguiente línea para ocultar esta pestaña:
           // href: null,
+        }}
+      />
+      
+      {/* Ocultar edit-route del tab bar */}
+      <Tabs.Screen
+        name="edit-route"
+        options={{
+          href: null, // Esto oculta la pestaña pero mantiene la ruta accesible
         }}
       />
     </Tabs>

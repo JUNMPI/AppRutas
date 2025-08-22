@@ -1,13 +1,13 @@
 import express from 'express';
 import {
-    changePassword,
-    deleteUserAccount,
-    getUserProfile,
-    getUserStats,
-    updateUserProfile
+  changePassword,
+  deleteUserAccount,
+  getUserProfile,
+  getUserStats,
+  updateUserProfile
 } from '../controllers/user.controller';
 import { authenticateToken } from '../middlewares/auth.middleware';
-import { cacheRouteStats, cacheUserProfile, invalidateCache } from '../middlewares/cache.middleware';
+import { cacheUserProfile, invalidateCache } from '../middlewares/cache.middleware';
 
 const router = express.Router();
 
@@ -47,9 +47,10 @@ router.put('/change-password',
  * @route   GET /api/user/stats
  * @desc    Obtener estadísticas del usuario
  * @access  Private
+ * NOTA: Cache desactivado para desarrollo - las estadísticas deben ser siempre frescas
  */
 router.get('/stats',
-  cacheRouteStats,
+  // cacheRouteStats, // COMENTADO - No cachear estadísticas
   getUserStats
 );
 
