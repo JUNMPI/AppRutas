@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { useTheme } from '../../hooks/useTheme';
@@ -16,7 +16,7 @@ export default function ThemeTestScreen() {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
         <Text style={[styles.title, { color: colors.text }]}>
-          Test de Tema
+          Tema
         </Text>
         
         <View style={styles.infoSection}>

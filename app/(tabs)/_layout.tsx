@@ -75,7 +75,7 @@ export default function TabLayout() {
         name="theme-test"
         options={{
           title: 'Tema',
-          headerTitle: 'Prueba de Tema',
+          headerTitle: 'Tema',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="color-palette" size={size || 24} color={color} />
           ),
