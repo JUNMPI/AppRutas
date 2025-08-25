@@ -1,13 +1,94 @@
+version: '3.8'
+
 services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: apprutas-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: apprutas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - apprutas-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis para cache (opcional)
+  redis:
+    image: redis:7-alpine
+    container_name: apprutas-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - apprutas-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Node.js/Express
+  backend:
+    build: ./backend
+    container_name: apprutas-backend
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/apprutas
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: mi_super_secreto_jwt_2024
+      JWT_EXPIRES_IN: 7d
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - apprutas-network
+    command: npm run dev
+
+  # Frontend Expo
   expo-app:
     build: .
+    container_name: apprutas-expo
     ports:
       - "8081:8081"
       - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    environment:
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+      REACT_NATIVE_PACKAGER_HOSTNAME: 0.0.0.0
     volumes:
       - .:/app
       - /app/node_modules
+      - /app/.expo
     stdin_open: true
     tty: true
+    depends_on:
+      - backend
+    networks:
+      - apprutas-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+networks:
+  apprutas-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
