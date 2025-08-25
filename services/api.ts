@@ -5,14 +5,16 @@ import { Platform } from 'react-native';
 const getBaseURL = () => {
   // Para desarrollo local
   if (__DEV__) {
-    // Cuando usas Expo Go con QR, siempre usa la IP local
-    // tanto para Android como iOS
     if (Platform.OS === 'web') {
-      // Solo para web usa localhost
+      // Para web usa localhost
       return 'http://localhost:5000/api';
     } else {
-      // Para dispositivos físicos (Android e iOS) con Expo Go
-      return 'http://192.168.100.4:5000/api';
+      // IMPORTANTE: Cambia esta IP por la IP de tu computadora en la red local
+      // Para encontrarla:
+      // Windows: ipconfig (busca IPv4 Address)
+      // Mac/Linux: ifconfig o ip addr
+      const YOUR_LOCAL_IP = '192.168.100.4'; // <-- CAMBIA ESTO
+      return `http://${YOUR_LOCAL_IP}:5000/api`;
     }
   } else {
     // Para producción (cambia esto a tu servidor de producción)
@@ -36,7 +38,7 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      console.log('Request to:', config.url); // Para debug
+      console.log('Request to:', config.url);
     } catch (error) {
       console.error('Error getting token:', error);
     }
@@ -51,7 +53,7 @@ api.interceptors.request.use(
 // Interceptor para manejar respuestas y errores
 api.interceptors.response.use(
   (response) => {
-    console.log('Response from:', response.config.url); // Para debug
+    console.log('Response from:', response.config.url);
     return response;
   },
   async (error) => {
@@ -62,12 +64,12 @@ api.interceptors.response.use(
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('userEmail');
       await AsyncStorage.removeItem('userName');
-      // Aquí podrías redirigir al login si lo necesitas
     }
     
     // Proporcionar mejor información del error
     if (error.code === 'ECONNREFUSED') {
       console.error('No se puede conectar al servidor. Asegúrate de que el backend esté corriendo.');
+      console.error('Si usas Docker, verifica que todos los servicios estén arriba con: docker-compose ps');
     } else if (error.code === 'ETIMEDOUT') {
       console.error('Timeout: El servidor tardó demasiado en responder.');
     } else if (!error.response) {

@@ -38,7 +38,9 @@ services:
 
   # Backend Node.js/Express
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: apprutas-backend
     environment:
       NODE_ENV: development
@@ -59,11 +61,13 @@ services:
       - /app/node_modules
     networks:
       - apprutas-network
-    command: npm run dev
+    command: sh -c "sleep 5 && npm run dev"
 
   # Frontend Expo
   expo-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: apprutas-expo
     ports:
       - "8081:8081"
@@ -77,6 +81,7 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.expo
+      - ./backend:/app/backend
     stdin_open: true
     tty: true
     depends_on:
@@ -85,6 +90,7 @@ services:
       - apprutas-network
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    command: npx expo start --tunnel
 
 networks:
   apprutas-network:
